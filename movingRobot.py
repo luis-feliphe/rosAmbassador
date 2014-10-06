@@ -29,6 +29,8 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 		self.isReady = False
 		self.isConstrained = False
 		self.isRegulating = False
+		self.posx = None
+		self.posy = None
 		######## Configurando objetos a serem recebidos ##############
 
 		self.classHandle = rtia.getObjectClassHandle("ObjectRoot.robot")
@@ -85,7 +87,7 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 		if self.sensor1Handle in attributes:
 			#print("REFLECT", attributes[self.sensor1Handle])
 			pass#print("REFLECT", attributes[self.sensor1Handle])
-		self.log("Valores: Bateria: " +str (bateria) + "; Temperatura: " + str(temperatura) + "; GPS: " + str (gps))
+#		self.log("Valores: Bateria: " +str (bateria) + "; Temperatura: " + str(temperatura) + "; GPS: " + str (gps))
 
 	def log (self, valor):
 		print ("\033[34m" + valor + "\033[0;0m")
@@ -125,14 +127,41 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 	def timeAdvanceGrant (self, time):
 		self.advanceTime = True
 
+	#### Methods to manage information with HLA #####
+	def getPosx (self):
+		if (self.posx == None) : 
+			return 0
+		return self.posx
+	def getPosy (self):
+		if (self.posy == None): 
+			return 0
+		return self.posy
+	def setPosx (self, pos):
+		print "set x"
+		self.posx = pos
+	def setPosy (self, pos):
+		print "set y"
+		self.posy = pos
+	def clear (self):
+		self.posx = None
+		self.posy = None
 
 
-#Metodos
+
+
+
+global mya
+
+######   Methods #######
 
 def getPos(odom_data):
+	global mya
 	pose = odom_data.pose.pose
-	print pose.position.x
-	print pose.position.y
+	mya.posx = pose.position.x
+	mya.posy = pose.position.y
+	#print pose.position.x
+	#print pose.position.y
+	
 	print "\n"
 	#rospy.loginfo("Positions %s", data.data)
 
@@ -143,7 +172,7 @@ def log (valor):
 
 
 
-####  CONFIGURAcaO E SETUP DA FEDERACAO ##########
+#### FEDERATION SETUP ##########
 
 print("Create ambassador")
 rtia = hla.rti.RTIAmbassador()
@@ -163,6 +192,7 @@ mya.initialize()
 log("inicialized!\n")
 
 ######### Announce Synchronization Point ######
+"""   ---- 
 label = "ReadyToRun"
 tag =  bytes ("hi!")
 rtia.registerFederationSynchronizationPoint(label, tag)
@@ -170,19 +200,25 @@ log("Synchronization Point Register!")
 while  (mya.isRegistered == False or mya.isAnnounced == False):
 	rtia.tick()
 print "tick"
-
+--- """
 ####### Esperando outros Federados ############
-x = input ("Waiting others federators\n")
+x = input ("Waiting for USERS, start aor federations then write a number and press ok.\n")
 
 #######Archieve Synchronized Point  ###########
+while (mya.isAnnounced == False):
+        rtia.tick()
 rtia.synchronizationPointAchieved("ReadyToRun")
+
+
+#tia.synchronizationPointAchieved("ReadyToRun")
+
 while (mya.isReady == False):
 	rtia.tick()
 log ("MyAmbassador : Is Ready to run ")
 
 ##### Enable Time Policy #####################
 currentTime =rtia.queryFederateTime()
-lookAhead = rtia.queryLookahead()
+lookAhead =1# rtia.queryLookahead()
 rtia.enableTimeRegulation(currentTime, lookAhead)
 while (mya.isRegulating == False):
 	rtia.tick()
@@ -204,24 +240,25 @@ rospy.Subscriber("odom",  Odometry, getPos)
 r = rospy.Rate(2) # hz
 
 
+
 while not rospy.is_shutdown():
 	###### HLA - Sending data to Federation ######
-	rtia.updateAttributeValues(mya.myObject,
-                        {mya.batteryHandle:"ValorBBB",
-                        mya.temperatureHandle: "Valor BBB ",
-                        mya.sensor1Handle:"ValorBBB",
-                        mya.sensor2Handle:"Valor BBB",
-                        mya.sensor3Handle:"Valor BBB",
-                        mya.gpsHandle: "Valor BBB ",
-                        mya.compassHandle:"ValorBBB",
-                        mya.gotoHandle:"ValorBBB",
-                        mya.rotateHandle:"ValorBBB",
-                        mya.activateHandle:"ValorBBB"},
-                        "update")
 
+	rtia.updateAttributeValues(mya.myObject,
+                        {mya.batteryHandle:"Bateria",
+                        mya.temperatureHandle: "temperatura",
+                        mya.sensor1Handle:"sensor1",
+                        mya.sensor2Handle:"sensor2",
+                        mya.sensor3Handle:"sensor3",
+                        mya.gpsHandle: "<" + str(mya.getPosx()) + ";" + str (mya.getPosy()) + ">",
+                        mya.compassHandle:"compass",
+                        mya.gotoHandle:"goto",
+                        mya.rotateHandle:"rotate",
+                        mya.activateHandle:"activate"},
+                        "update")
         rtia.tick(1.0, 1.0)
 	################## ROS ####################
-	# create a twist message, fill in the details
+	# create a twist message
 	twist = Twist()
 	twist.linear.x = random.randint(1, 100);
 	twist.angular.z = random.randint(1, 100);
@@ -232,13 +269,13 @@ while not rospy.is_shutdown():
 	r.sleep()
 	################ HLA #####################
 	#######  Time Management  ########
-	time = rtia.queryFederateTime()
+	time = rtia.queryFederateTime() + 1
 	rtia.timeAdvanceRequest(time)
+	print ("Tempo Atual = " , time)
 	while (mya.advanceTime == False):
 		rtia.tick()
 	mya.advanceTime = False
 	#################################
-
 
 mya.terminate()
 rtia.resignFederationExecution(hla.rti.ResignAction.DeleteObjectsAndReleaseAttributes)
