@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+#####################################################
+# This code is responsible by listen events on ROS  #
+# and publish on CERTI - HLA.                       #
+#####################################################
 
 #ROS 
 import rospy

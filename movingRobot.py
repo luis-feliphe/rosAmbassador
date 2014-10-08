@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 
-""" Example code of how to move a robot forward for 3 seconds. """
+######################################
+# This file simulate a robot on ROS. #
+# To use, you need to pass like      #
+# argument the numnber of robot,     #
+# like "./movingRobot 1"             #
+######################################
 
 
 
@@ -23,7 +28,7 @@ def log (valor):
 #############
 # ROS SETUP #
 #############
-log ("\t\t------ STARTING ROS SERVICES -------")
+log (" o Starting Ros")
 
 #Became a node, using the arg to decide what the number of robot
 rospy.init_node('robot_'+str(sys.argv[1]))
@@ -41,7 +46,7 @@ r = rospy.Rate(10) # hz
 #   Main Loop   #
 #################
 while not rospy.is_shutdown():
-	#prin the actual time
+	#print the actual time
 	millis = int(round(time.time() * 1000))
 	print "tempo no incio do loop " + str(millis)
 	# create a twist message with random values
