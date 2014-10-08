@@ -1,20 +1,23 @@
 #!/usr/bin/env python
 
 
-#Bibliotecas para o ROS 
+#ROS 
 import rospy
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 import random
 
-#Bibliotecas para o CERTI - HLA
+#CERTI - HLA
 import hla.rti
 import hla.omt as fom
 import struct
 
-#Classe utilizada pelo CERTI
 
-
+################################
+#   The  Ambassador class      #
+#TODO Move this class to other #
+# File                         #
+################################
 class MyAmbassador(hla.rti.FederateAmbassador):
 	def initialize(self):
 		#Variables
@@ -28,10 +31,9 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 		self.posx = None
 		self.posy = None
 		self.id = None
-		######## Configurando objetos a serem recebidos ##############
+		#Handles to manipulate data from CERTI - RTIG
 
 		self.classHandle = rtia.getObjectClassHandle("ObjectRoot.robot")
-
 		self.idHandle = rtia.getAttributeHandle("id", self.classHandle)
 		self.batteryHandle = rtia.getAttributeHandle("battery", self.classHandle)
 		self.temperatureHandle = rtia.getAttributeHandle("temperature", self.classHandle)
@@ -43,12 +45,14 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 		self.gotoHandle = rtia.getAttributeHandle("goto", self.classHandle)
 		self.rotateHandle = rtia.getAttributeHandle("rotate", self.classHandle)
 		self.activateHandle = rtia.getAttributeHandle("activate", self.classHandle)
-
+		#Subscribe HLA
 		rtia.subscribeObjectClassAttributes(self.classHandle,[self.idHandle, self.batteryHandle, self.temperatureHandle, self.sensor1Handle, self.sensor2Handle, self.sensor3Handle, self.gpsHandle, self.compassHandle, self.gotoHandle, self.rotateHandle, self.activateHandle])
-		##############################################################
+		#Publish HLA
 		rtia.publishObjectClass(self.classHandle,[self.idHandle, self.batteryHandle, self.temperatureHandle, self.sensor1Handle, self.sensor2Handle, self.sensor3Handle, self.gpsHandle, self.compassHandle, self.gotoHandle, self.rotateHandle, self.activateHandle])
 		self.myObject = rtia.registerObjectInstance(self.classHandle)#, "ROBO_2")
-
+	###########################
+	#Calbacks from CERTI - HLA#
+	###########################
 	def reflectAttributeValues(self, object, attributes, tag, order, transport, time=None, retraction=None):
 		bateria = None
 		temperatura = None
@@ -57,35 +61,13 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 			gps = attributes[self.gpsHandle]
 		if self.batteryHandle in attributes:
 			bateria = attributes [self.batteryHandle]
-			#print("REFLECT", attributes[self.batteryHandle])
-			#print("Alguma coisa nao esta certa aqui")
-			#pass
 
 		if self.temperatureHandle in attributes:
-			#print("REFLECT", attributes[self.temperatureHandle])
 			valor = attributes[self.temperatureHandle]
 			temperatura = valor
-			"""valor =  valor.split(":")[1]
-			valor =  valor.replace("\"", "")
-			valor =  valor.replace("\\", "")
-			valor =  valor.replace(">", "")
-			valor =  valor.replace("<", "")
-			x, y  = valor.split(";")
-			import time
-			time.sleep(1)
-			print ("valor x : " + str (x) + " valor y : " + str (y))"""
-			#print ("Received value: ", valor)
-			#if (int (x) != 0):
-				#TODO Do something
-				#self.ser.write("<"+ str(x)+ ":" + str( y )+ ">")
-				#print ("dados enviados ao Arduino")
-				#pass
-
 
 		if self.sensor1Handle in attributes:
-			#print("REFLECT", attributes[self.sensor1Handle])
-			pass#print("REFLECT", attributes[self.sensor1Handle])
-#		self.log("Valores: Bateria: " +str (bateria) + "; Temperatura: " + str(temperatura) + "; GPS: " + str (gps))
+			pass
 
 	def log (self, valor):
 		print ("\033[34m" + valor + "\033[0;0m")
@@ -94,7 +76,6 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 	def terminate(self):
 		rtia.deleteObjectInstance(self.myObject, "ROBO_2")
 
-	# RTI callbacks
 	def startRegistrationForObjectClass(*params):
 		print("START", params)
 
@@ -125,7 +106,11 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 	def timeAdvanceGrant (self, time):
 		self.advanceTime = True
 
-	#### Methods to manage information with HLA #####
+	########################
+	# Methods to Manage    #
+	# information from HLA #
+	# (not used)           #
+	########################
 	def getPosx (self):
 		if (self.posx == None or self.id == None) : 
 			return 0
@@ -154,20 +139,19 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 
 global mya
 
-######   Methods #######
-
-def getPos(odom_data):
-	print "dados do robot 1"
+##########################################################
+# This Method is a callback that is invoqued when ROS    #
+# Publish something. Is responsible for send data to HLA.#
+##########################################################
+def getPos(odom_data, numberID):
 	global mya
-	mya.id = 1
+	mya.id = numberID
 	pose = odom_data.pose.pose
 	mya.posx = pose.position.x
 	mya.posy = pose.position.y
-	#print pose.position.x
-	#print pose.position.y
 
 	rtia.updateAttributeValues(mya.myObject,
-		{mya.idHandle:"1 ",
+		{mya.idHandle:str(numberID)+" ",
 		mya.batteryHandle:"Bateria ",
 		mya.temperatureHandle: "temperatura ",
 		mya.sensor1Handle:"sensor1 ",
@@ -179,198 +163,33 @@ def getPos(odom_data):
 		mya.rotateHandle:"rotate " ,
 		mya.activateHandle:"activate "},
 		"update")
-        #rtia.tick() #1.0, 1.0)
 
 
+##############################################
+# These methods just invoque the getPos,     #
+# too many just beacause is necessary know   #
+# from each robot the message is coming      #
+##############################################
 
-
-	
-	#rospy.loginfo("Positions %s", data.data)
-
+def getPos1(odom_data):
+	getPos (odom_data,1)
 def getPos2(odom_data):
-	print "dados do robot 2"
-	global mya
-	mya.id = 2
-	pose = odom_data.pose.pose
-	mya.posx = pose.position.x
-	mya.posy = pose.position.y
-
-	rtia.updateAttributeValues(mya.myObject,
-                     {mya.idHandle:"2 ",
-                        mya.batteryHandle:"Bateria ",
-                        mya.temperatureHandle: "temperatura ",
-                        mya.sensor1Handle:"sensor1 ",
-                        mya.sensor2Handle:"sensor2 ",
-                        mya.sensor3Handle:"sensor3 ",
-                        mya.gpsHandle: "<" + str(pose.position.x) + ";" + str (pose.position.y) + "> ",
-                        mya.compassHandle:"compass ",
-                        mya.gotoHandle:"goto " ,
-                        mya.rotateHandle:"rotate ",
-                        mya.activateHandle:"activate "},
-                        "update")
-
-	
+	getPos(odom_data, 2)
 def getPos3(odom_data):
-	print "dados do robot 3"
-	global mya
-	mya.id = 3
-	pose = odom_data.pose.pose
-	mya.posx = pose.position.x
-	mya.posy = pose.position.y
-	rtia.updateAttributeValues(mya.myObject,
-                     {mya.idHandle:"3 ",
-                        mya.batteryHandle:"Bateria ",
-                        mya.temperatureHandle: "temperatura ",
-                        mya.sensor1Handle:"sensor1 ",
-                        mya.sensor2Handle:"sensor2 ",
-                        mya.sensor3Handle:"sensor3 ",
-                        mya.gpsHandle: "<" + str(pose.position.x) + ";" + str (pose.position.y) + "> ",
-                        mya.compassHandle:"compass ",
-                        mya.gotoHandle:"goto " ,
-                        mya.rotateHandle:"rotate ",
-                        mya.activateHandle:"activate "},
-                        "update")
-
+	getPos(odom_data, 3)
 def getPos4(odom_data):
-	print "dados do robot 1"
-	global mya
-	mya.id = 4
-	pose = odom_data.pose.pose
-	mya.posx = pose.position.x
-	mya.posy = pose.position.y
-	#print pose.position.x
-	#print pose.position.y
-
-	rtia.updateAttributeValues(mya.myObject,
-		{mya.idHandle:"4 ",
-		mya.batteryHandle:"Bateria ",
-		mya.temperatureHandle: "temperatura ",
-		mya.sensor1Handle:"sensor1 ",
-		mya.sensor2Handle:"sensor2 ",
-		mya.sensor3Handle:"sensor3 ",
-		mya.gpsHandle: "<" + str(pose.position.x) + ";" + str (pose.position.y) + "> ",
-		mya.compassHandle:"compass ",
-		mya.gotoHandle:"goto ",
-		mya.rotateHandle:"rotate " ,
-		mya.activateHandle:"activate "},
-		"update")
-        #rtia.tick() #1.0, 1.0)
-
-
-
-
-	
-	#rospy.loginfo("Positions %s", data.data)
-
+	getPos (odom_data,4)
 def getPos5(odom_data):
-	print "dados do robot 2"
-	global mya
-	mya.id = 5
-	pose = odom_data.pose.pose
-	mya.posx = pose.position.x
-	mya.posy = pose.position.y
-
-	rtia.updateAttributeValues(mya.myObject,
-                     {mya.idHandle:"5 ",
-                        mya.batteryHandle:"Bateria ",
-                        mya.temperatureHandle: "temperatura ",
-                        mya.sensor1Handle:"sensor1 ",
-                        mya.sensor2Handle:"sensor2 ",
-                        mya.sensor3Handle:"sensor3 ",
-                        mya.gpsHandle: "<" + str(pose.position.x) + ";" + str (pose.position.y) + "> ",
-                        mya.compassHandle:"compass ",
-                        mya.gotoHandle:"goto " ,
-                        mya.rotateHandle:"rotate ",
-                        mya.activateHandle:"activate "},
-                        "update")
-        #rtia.tick() #1.0, 1.0)
-
-	
+	getPos(odom_data, 5)
 def getPos6(odom_data):
-	print "dados do robot 3"
-	global mya
-	mya.id = 6
-	pose = odom_data.pose.pose
-	mya.posx = pose.position.x
-	mya.posy = pose.position.y
-	rtia.updateAttributeValues(mya.myObject,
-                     {mya.idHandle:"6 ",
-                        mya.batteryHandle:"Bateria ",
-                        mya.temperatureHandle: "temperatura ",
-                        mya.sensor1Handle:"sensor1 ",
-                        mya.sensor2Handle:"sensor2 ",
-                        mya.sensor3Handle:"sensor3 ",
-                        mya.gpsHandle: "<" + str(pose.position.x) + ";" + str (pose.position.y) + "> ",
-                        mya.compassHandle:"compass ",
-                        mya.gotoHandle:"goto " ,
-                        mya.rotateHandle:"rotate ",
-                        mya.activateHandle:"activate "},
-                        "update")
-        
+	getPos(odom_data, 6)
 def getPos7(odom_data):
-	print "dados do robot 3"
-	global mya
-	mya.id = 7
-	pose = odom_data.pose.pose
-	mya.posx = pose.position.x
-	mya.posy = pose.position.y
-	rtia.updateAttributeValues(mya.myObject,
-                     {mya.idHandle:"7 ",
-                        mya.batteryHandle:"Bateria ",
-                        mya.temperatureHandle: "temperatura ",
-                        mya.sensor1Handle:"sensor1 ",
-                        mya.sensor2Handle:"sensor2 ",
-                        mya.sensor3Handle:"sensor3 ",
-                        mya.gpsHandle: "<" + str(pose.position.x) + ";" + str (pose.position.y) + "> ",
-                        mya.compassHandle:"compass ",
-                        mya.gotoHandle:"goto " ,
-                        mya.rotateHandle:"rotate ",
-                        mya.activateHandle:"activate "},
-                        "update")
-        
-
+	getPos(odom_data, 7)
 def getPos8(odom_data):
-	print "dados do robot 3"
-	global mya
-	mya.id = 8
-	pose = odom_data.pose.pose
-	mya.posx = pose.position.x
-	mya.posy = pose.position.y
-	rtia.updateAttributeValues(mya.myObject,
-                     {mya.idHandle:"8 ",
-                        mya.batteryHandle:"Bateria ",
-                        mya.temperatureHandle: "temperatura ",
-                        mya.sensor1Handle:"sensor1 ",
-                        mya.sensor2Handle:"sensor2 ",
-                        mya.sensor3Handle:"sensor3 ",
-                        mya.gpsHandle: "<" + str(pose.position.x) + ";" + str (pose.position.y) + "> ",
-                        mya.compassHandle:"compass ",
-                        mya.gotoHandle:"goto " ,
-                        mya.rotateHandle:"rotate ",
-                        mya.activateHandle:"activate "},
-                        "update")
-        
-
+	getPos(odom_data, 8)
 def getPos9(odom_data):
-	print "dados do robot 3"
-	global mya
-	mya.id = 9
-	pose = odom_data.pose.pose
-	mya.posx = pose.position.x
-	mya.posy = pose.position.y
-	rtia.updateAttributeValues(mya.myObject,
-                     {mya.idHandle:"9 ",
-                        mya.batteryHandle:"Bateria ",
-                        mya.temperatureHandle: "temperatura ",
-                        mya.sensor1Handle:"sensor1 ",
-                        mya.sensor2Handle:"sensor2 ",
-                        mya.sensor3Handle:"sensor3 ",
-                        mya.gpsHandle: "<" + str(pose.position.x) + ";" + str (pose.position.y) + "> ",
-                        mya.compassHandle:"compass ",
-                        mya.gotoHandle:"goto " ,
-                        mya.rotateHandle:"rotate ",
-                        mya.activateHandle:"activate "},
-                        "update")
+	getPos(odom_data, 9)
+ 
         
 def log (valor):
 	print ("\033[36m" + valor + "\033[0;0m")
@@ -379,26 +198,28 @@ def log (valor):
 
 
 
-#### FEDERATION SETUP ##########
+##########################
+### Federation Setup   ###
+##########################
 
 print("Create ambassador")
 rtia = hla.rti.RTIAmbassador()
 mya = MyAmbassador()
 
-#Criando Federacao 
+#Create a federation 
 try:
     rtia.createFederationExecution("ExampleFederation", "PyhlaToPtolemy.fed")
     log("Federation created.\n")
 except hla.rti.FederationExecutionAlreadyExists:
     log("Federation already exists.\n")
 
-####### Join into a Federation ###############
+#join in a federation
 mya = MyAmbassador()
 rtia.joinFederationExecution("uav-recv", "ExampleFederation", mya)
 mya.initialize()
 log("inicialized!\n")
 
-######### Announce Synchronization Point ######
+# Announce Synchronization Point (not used by Master)
 """   ---- 
 label = "ReadyToRun"
 tag =  bytes ("hi!")
@@ -408,10 +229,10 @@ while  (mya.isRegistered == False or mya.isAnnounced == False):
 	rtia.tick()
 print "tick"
 --- """
-####### Esperando outros Federados ############
+#wait for others federates
 x = input ("Waiting for USERS, start aor federations then write a number and press ok.\n")
 
-#######Archieve Synchronized Point  ###########
+#Archieve Synchronized Point 
 while (mya.isAnnounced == False):
         rtia.tick()
 rtia.synchronizationPointAchieved("ReadyToRun")
@@ -423,7 +244,7 @@ while (mya.isReady == False):
 	rtia.tick()
 log ("MyAmbassador : Is Ready to run ")
 
-##### Enable Time Policy #####################
+# Enable Time Policy 
 currentTime =rtia.queryFederateTime()
 lookAhead =1# rtia.queryLookahead()
 rtia.enableTimeRegulation(currentTime, lookAhead)
@@ -434,14 +255,17 @@ while (mya.isConstrained == False):
 	rtia.tick()
 log("MyAmbassador: Time is Regulating and is Constrained")
 
-###########  CONFIGURACAO E SETUP DO ROS  ###########
+#################
+#  Setup of ROS #
+#################
+
 log ("\t\t------ STARTING ROS SERVICES -------")
 
-# first thing, init a node!
+# becabe a node
 rospy.init_node('certiListener')
 
-#subscribing a position
-rospy.Subscriber("robot_0/odom",  Odometry, getPos)
+#Topics that this node will subscribe
+rospy.Subscriber("robot_0/odom",  Odometry, getPos1)
 rospy.Subscriber("robot_1/odom",  Odometry, getPos2)
 rospy.Subscriber("robot_2/odom",  Odometry, getPos3)
 rospy.Subscriber("robot_3/odom",  Odometry, getPos4)
@@ -450,32 +274,15 @@ rospy.Subscriber("robot_5/odom",  Odometry, getPos6)
 rospy.Subscriber("robot_6/odom",  Odometry, getPos7)
 rospy.Subscriber("robot_7/odom",  Odometry, getPos8)
 rospy.Subscriber("robot_8/odom",  Odometry, getPos9)
+
 r = rospy.Rate(2) # hz
 
 
-
+################
+## Main loop  ##
+################
 while not rospy.is_shutdown():
-	###### HLA - Sending data to Federation ######
-	print (mya.getPosx())
-	print (mya.getPosy())
-#	rtia.updateAttributeValues(mya.myObject,
-#                        {mya.idHandle:str(mya.getId()),
-#                        mya.batteryHandle:"Bateria",
-#                        mya.temperatureHandle: "temperatura",
-#                        mya.sensor1Handle:"sensor1",
-#                        mya.sensor2Handle:"sensor2",
-#                        mya.sensor3Handle:"sensor3",
-#                        mya.gpsHandle: "<" + str(mya.getPosx()) + ";" + str (mya.getPosy()) + ">",
-#                        mya.compassHandle:"compass",
-#                        mya.gotoHandle:"goto",
-#                        mya.rotateHandle:"rotate",
-#                        mya.activateHandle:"activate"},
-#                        "update")
-#        rtia.tick() #1.0, 1.0)
-################## ROS ####################
-#Maybe this is necessary to work
-	#r.sleep()
-	################ HLA #####################
+	############# HLA ################
 	#######  Time Management  ########
 	time = rtia.queryFederateTime() + 1
 	rtia.timeAdvanceRequest(time)
