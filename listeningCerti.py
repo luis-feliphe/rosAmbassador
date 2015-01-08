@@ -22,8 +22,10 @@ import struct
 #TODO Move this class to other #
 # File                         #
 ################################
+
 class MyAmbassador(hla.rti.FederateAmbassador):
 	def initialize(self):
+
 		#Variables
 		self.time = 0
 		self.advanceTime = False
@@ -35,6 +37,10 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 		self.posx = None
 		self.posy = None
 		self.id = None
+
+		self.attMap = {}
+		self.hasData = False
+
 		#Handles to manipulate data from CERTI - RTIG
 
 		self.classHandle = rtia.getObjectClassHandle("ObjectRoot.robot")
@@ -58,24 +64,24 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 	#Calbacks from CERTI - HLA#
 	###########################
 	def reflectAttributeValues(self, object, attributes, tag, order, transport, time=None, retraction=None):
-		bateria = None
-		temperatura = None
-		gps = None
-		if self.gpsHandle in attributes:
-			gps = attributes[self.gpsHandle]
-		if self.batteryHandle in attributes:
-			bateria = attributes [self.batteryHandle]
 
-		if self.temperatureHandle in attributes:
-			valor = attributes[self.temperatureHandle]
-			temperatura = valor
+		self.attMap["time"] = rtia.queryFederateTime()
+		self.attMap["id"] = attributes[self.idHandle]
+		self.attMap["battery"]= attributes[self.batteryHandle]
+                self.attMap["temperature"]= attributes[self.temperatureHandle]
+		self.attMap["sensor1"]= attributes[self.sensor1Handle]
+		self.attMap["sensor2"]= attributes[self.sensor2Handle]
+		self.attMap["sensor3"]= attributes[self.sensor3Handle]
+                self.attMap["gps"] = attributes[self.gpsHandle]
+                self.attMap["compass"] = attributes[self.compassHandle]
+                self.attMap["goto"] = attributes[self.gotoHandle]
+                self.attMap["rotate"]= attributes[self.rotateHandle]
+                self.attMap["activate"]= attributes[self.activateHandle]
 
-		if self.sensor1Handle in attributes:
-			pass
+		self.hasData= True
 
 	def log (self, valor):
 		print ("\033[34m" + valor + "\033[0;0m")
-
 
 	def terminate(self):
 		rtia.deleteObjectInstance(self.myObject, "ROBO_2")
@@ -101,7 +107,7 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 	def timeConstrainedEnabled (self, time):
 		self.isConstrained = True
 
-	def timeRegulationEnabled (self, time): 
+	def timeRegulationEnabled (self, time):
 		self.isRegulating = True
 
 	def discoverObjectInstance(self, object, objectclass, name):
@@ -116,15 +122,15 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 	# (not used)           #
 	########################
 	def getPosx (self):
-		if (self.posx == None or self.id == None) : 
+		if (self.posx == None or self.id == None) :
 			return 0
 		return self.posx
 	def getId(self):
-		if (self.posx == None or self.posy == None) : 
+		if (self.posx == None or self.posy == None) :
 			return 0
 		return self.id
 	def getPosy (self):
-		if (self.posy == None or self.id == None): 
+		if (self.posy == None or self.id == None):
 			return 0
 		return self.posy
 	def setPosx (self, pos):
@@ -139,14 +145,18 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 
 
 
-
-
 global mya
-
+global on 
+on = True
+global cont
+cont = 0
 ##########################################################
 # This Method is a callback that is invoqued when ROS    #
 # Publish something. Is responsible for send data to HLA.#
 ##########################################################
+
+
+
 def getPos(odom_data, numberID):
 	global mya
 	mya.id = numberID
@@ -167,6 +177,26 @@ def getPos(odom_data, numberID):
 		mya.rotateHandle:"rotate " ,
 		mya.activateHandle:"activate "},
 		"update")
+
+def getVel2 (Twist):
+	global mya
+	print "testando"
+	velLin = twist.linear.x
+	velAng = twist.angular.y
+	rtia.updateAttributeValues(mya.myObject,
+		{mya.idHandle:"1 ",
+		mya.batteryHandle:"Bateria ",
+		mya.temperatureHandle: "temperatura ",
+		mya.sensor1Handle:"sensor1 ",
+		mya.sensor2Handle:"sensor2 ",
+		mya.sensor3Handle:"sensor3 ",
+		mya.gpsHandle: "<" + str(velAng) + ";" + str (velLin) + "> ",
+		mya.compassHandle:"compass ",
+		mya.gotoHandle:"goto ",
+		mya.rotateHandle:"rotate " ,
+		mya.activateHandle:"activate "},
+		"update")
+
 
 
 ##############################################
@@ -210,7 +240,7 @@ print("Create ambassador")
 rtia = hla.rti.RTIAmbassador()
 mya = MyAmbassador()
 
-#Create a federation 
+#Create a federation
 try:
     rtia.createFederationExecution("ExampleFederation", "PyhlaToPtolemy.fed")
     log("Federation created.\n")
@@ -224,7 +254,7 @@ mya.initialize()
 log("inicialized!\n")
 
 # Announce Synchronization Point (not used by Master)
-"""   ---- 
+"""   ----
 label = "ReadyToRun"
 tag =  bytes ("hi!")
 rtia.registerFederationSynchronizationPoint(label, tag)
@@ -233,10 +263,11 @@ while  (mya.isRegistered == False or mya.isAnnounced == False):
 	rtia.tick()
 print "tick"
 --- """
+
 #wait for others federates
 x = input ("Waiting for USERS, start aor federations then write a number and press ok.\n")
 
-#Archieve Synchronized Point 
+#Archieve Synchronized Point
 while (mya.isAnnounced == False):
         rtia.tick()
 rtia.synchronizationPointAchieved("ReadyToRun")
@@ -248,7 +279,7 @@ while (mya.isReady == False):
 	rtia.tick()
 log ("MyAmbassador : Is Ready to run ")
 
-# Enable Time Policy 
+# Enable Time Policy
 currentTime =rtia.queryFederateTime()
 lookAhead =1# rtia.queryLookahead()
 rtia.enableTimeRegulation(currentTime, lookAhead)
@@ -259,6 +290,7 @@ while (mya.isConstrained == False):
 	rtia.tick()
 log("MyAmbassador: Time is Regulating and is Constrained")
 
+
 #################
 #  Setup of ROS #
 #################
@@ -266,19 +298,22 @@ log("MyAmbassador: Time is Regulating and is Constrained")
 log ("\t\t------ STARTING ROS SERVICES -------")
 
 # becabe a node
-rospy.init_node('certiListener')
+rospy.init_node('bridge')
 
 #Topics that this node will subscribe
 rospy.Subscriber("robot_0/odom",  Odometry, getPos1)
 rospy.Subscriber("robot_1/odom",  Odometry, getPos2)
-rospy.Subscriber("robot_2/odom",  Odometry, getPos3)
-rospy.Subscriber("robot_3/odom",  Odometry, getPos4)
-rospy.Subscriber("robot_4/odom",  Odometry, getPos5)
-rospy.Subscriber("robot_5/odom",  Odometry, getPos6)
-rospy.Subscriber("robot_6/odom",  Odometry, getPos7)
-rospy.Subscriber("robot_7/odom",  Odometry, getPos8)
-rospy.Subscriber("robot_8/odom",  Odometry, getPos9)
-
+#rospy.Subscriber("cmd_vel_mux/input/teleop",  Twist, getVel2)
+#rospy.Subscriber("robot_2/odom",  Odometry, getPos3)
+#rospy.Subscriber("robot_3/odom",  Odometry, getPos4)
+#rospy.Subscriber("robot_4/odom",  Odometry, getPos5)
+#rospy.Subscriber("robot_5/odom",  Odometry, getPos6)
+#rospy.Subscriber("robot_6/odom",  Odometry, getPos7)
+#rospy.Subscriber("robot_7/odom",  Odometry, getPos8)
+#rospy.Subscriber("robot_8/odom",  Odometry, getPos9)
+global p
+p = rospy.Publisher("robot_1/cmd_vel", Twist)
+global r
 r = rospy.Rate(2) # hz
 
 
@@ -286,12 +321,25 @@ r = rospy.Rate(2) # hz
 ## Main loop  ##
 ################
 while not rospy.is_shutdown():
-	############# HLA ################
+
+	if mya.hasData==True:
+#		_activate = mya.attMap["activate"]
+		_goto = mya.attMap["goto"]
+#		_time = int(round(time.time()*1000))
+		print "Recebeu o dado de \"GOTO\"" + str (_goto)
+		twist = Twist()
+		twist.linear.x = 1
+		twist.linear.y = 1 
+		p.publish (twist)
+		
+		mya.hasData = False
+		mya.attMap = {}
+
+	print "Advancing time"
 	#######  Time Management  ########
-	time = rtia.queryFederateTime() + 1
-	rtia.timeAdvanceRequest(time)
-	print ("Tempo Atual no HLA = " , time)
-	print ("Tempo Atual no ROS = ", rospy.Time.now())
+	timeHLA = rtia.queryFederateTime() + 1
+	rtia.timeAdvanceRequest(timeHLA)
+	#print ("Tempo Atual no HLA = " , timeHLA)
 	while (mya.advanceTime == False):
 		rtia.tick()
 	mya.advanceTime = False

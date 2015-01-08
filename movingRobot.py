@@ -41,7 +41,10 @@ p = rospy.Publisher(x, Twist)
 
 r = rospy.Rate(10) # hz
 
-
+global on
+on = True
+global cont 
+cont = 0 
 #################
 #   Main Loop   #
 #################
@@ -51,8 +54,9 @@ while not rospy.is_shutdown():
 	print "tempo no incio do loop " + str(millis)
 	# create a twist message with random values
 	twist = Twist()
-	twist.linear.x = random.randint(1, 100);
-	twist.angular.z = random.randint(1, 100);
+	twist.linear.x = 1
+	twist.linear.y = 1
+		
 	# Publish the message
 	p.publish(twist)
 	# TODO check if this sleep is necessary
