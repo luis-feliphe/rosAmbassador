@@ -7,6 +7,7 @@
 
 #ROS 
 import rospy
+from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 import random
@@ -159,11 +160,14 @@ cont = 0
 
 def getPos(odom_data, numberID):
 	global mya
-	mya.id = numberID
-	pose = odom_data.pose.pose
-	mya.posx = pose.position.x
-	mya.posy = pose.position.y
-
+	#mya.id = numberID
+	#pose = odom_data.pose.pose
+	#mya.posx = pose.position.x
+	#mya.posy = pose.position.y
+	#log(" ------------ ")
+	#print mya.posx
+	#print mya.posy
+	#log(" ------------ ")
 	rtia.updateAttributeValues(mya.myObject,
 		{mya.idHandle:str(numberID)+" ",
 		mya.batteryHandle:"Bateria ",
@@ -171,7 +175,8 @@ def getPos(odom_data, numberID):
 		mya.sensor1Handle:"sensor1 ",
 		mya.sensor2Handle:"sensor2 ",
 		mya.sensor3Handle:"sensor3 ",
-		mya.gpsHandle: "<" + str(pose.position.x) + ";" + str (pose.position.y) + "> ",
+		#mya.gpsHandle: "<" + str(pose.position.x) + ";" + str (pose.position.y) + "> ",
+		mya.gpsHandle: "<" + str(odom_data.pose.pose.position.x) + ";" + str (odom_data.pose.pose.position.y) + "> ",
 		mya.compassHandle:"compass ",
 		mya.gotoHandle:"goto ",
 		mya.rotateHandle:"rotate " ,
@@ -181,8 +186,8 @@ def getPos(odom_data, numberID):
 def getVel2 (Twist):
 	global mya
 	print "testando"
-	velLin = twist.linear.x
-	velAng = twist.angular.y
+	#velLin = twist.linear.x
+	#velAng = twist.angular.y
 	rtia.updateAttributeValues(mya.myObject,
 		{mya.idHandle:"1 ",
 		mya.batteryHandle:"Bateria ",
@@ -190,7 +195,8 @@ def getVel2 (Twist):
 		mya.sensor1Handle:"sensor1 ",
 		mya.sensor2Handle:"sensor2 ",
 		mya.sensor3Handle:"sensor3 ",
-		mya.gpsHandle: "<" + str(velAng) + ";" + str (velLin) + "> ",
+		#mya.gpsHandle: "<" + str(velAng) + ";" + str (velLin) + "> ",
+		mya.gpsHandle: "<" + str(twist.linearx) + ";" + str (twist.linear.y) + "> ",
 		mya.compassHandle:"compass ",
 		mya.gotoHandle:"goto ",
 		mya.rotateHandle:"rotate " ,
@@ -198,13 +204,16 @@ def getVel2 (Twist):
 		"update")
 
 
-
 ##############################################
 # These methods just invoque the getPos,     #
 # too many just beacause is necessary know   #
 # from each robot the message is coming      #
 ##############################################
-
+global dataToSend
+dataToSend=None
+def saveScan(data):
+	global dataToSend
+	dataToSend = data
 def getPos1(odom_data):
 	getPos (odom_data,1)
 def getPos2(odom_data):
@@ -301,8 +310,10 @@ log ("\t\t------ STARTING ROS SERVICES -------")
 rospy.init_node('bridge')
 
 #Topics that this node will subscribe
-rospy.Subscriber("robot_0/odom",  Odometry, getPos1)
-rospy.Subscriber("robot_1/odom",  Odometry, getPos2)
+#rospy.Subscriber("robot_0/odom",  Odometry, saveData)
+#rospy.Subscriber("robot_0/odom",  Odometry, saveData)
+rospy.Subscriber("robot_3/base_scan", LaserScan, saveScan)
+
 #rospy.Subscriber("cmd_vel_mux/input/teleop",  Twist, getVel2)
 #rospy.Subscriber("robot_2/odom",  Odometry, getPos3)
 #rospy.Subscriber("robot_3/odom",  Odometry, getPos4)
@@ -312,30 +323,66 @@ rospy.Subscriber("robot_1/odom",  Odometry, getPos2)
 #rospy.Subscriber("robot_7/odom",  Odometry, getPos8)
 #rospy.Subscriber("robot_8/odom",  Odometry, getPos9)
 global p
-p = rospy.Publisher("robot_1/cmd_vel", Twist)
+p = rospy.Publisher("robot_3/cmd_vel", Twist)
 global r
 r = rospy.Rate(2) # hz
 
-
+parada = 0
+cont = 0
+on = True
+walk = False
 ################
 ## Main loop  ##
 ################
 while not rospy.is_shutdown():
+	###################################
+	### Bridge Sending Data to HLA  ###
+	##################################
+	if dataToSend != None:
+		print "something to send, why? " + str (min(dataToSend.ranges))
+		rtia.updateAttributeValues(mya.myObject,
+			{mya.idHandle:str(1)+" ",
+			mya.batteryHandle:"Bateria ",
+			mya.temperatureHandle: "temperatura ",
+			mya.sensor1Handle:str(min(dataToSend.ranges))+" ",
+			mya.sensor2Handle:"sensor2 ",
+			mya.sensor3Handle:"sensor3 ",
+			#mya.gpsHandle: "<" + str(pose.position.x) + ";" + str (pose.position.y) + "> ",
+			mya.gpsHandle: "<" + str(0) + ";" + str (0) + "> ",
+			mya.compassHandle:"compass ",
+			mya.gotoHandle:"goto ",
+			mya.rotateHandle:"rotate " ,
+			mya.activateHandle:"activate "},
+			"update")
+		dataToSend =  None
+		position = None	
 
+	######################################
+	### Bridge handling data from  HLA  ##
+	######################################
 	if mya.hasData==True:
-#		_activate = mya.attMap["activate"]
 		_goto = mya.attMap["goto"]
-#		_time = int(round(time.time()*1000))
-		print "Recebeu o dado de \"GOTO\"" + str (_goto)
-		twist = Twist()
-		twist.linear.x = 1
-		twist.linear.y = 1 
-		p.publish (twist)
-		
+		#Walk
+
+		if (_goto.count("w") > 0):
+			twist = Twist()
+			twist.linear.x = 1
+			p.publish (twist)
+			print "Set to walk"
+		if (_goto.count("s")> 0):
+			print "set to stop"
+			twist = Twist()
+			twist.linear.x = 0
+			p.publish (twist)
+			walk = False
+		#if (walk):
+		#	print ("walking")
+		#	twist = Twist()
+		#	twist.linear.x = 1
+		#	p.publish (twist)
 		mya.hasData = False
 		mya.attMap = {}
 
-	print "Advancing time"
 	#######  Time Management  ########
 	timeHLA = rtia.queryFederateTime() + 1
 	rtia.timeAdvanceRequest(timeHLA)
@@ -344,6 +391,7 @@ while not rospy.is_shutdown():
 		rtia.tick()
 	mya.advanceTime = False
 	#################################
+#		_time = int(round(time.time()*1000))
 
 mya.terminate()
 rtia.resignFederationExecution(hla.rti.ResignAction.DeleteObjectsAndReleaseAttributes)

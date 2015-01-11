@@ -54,8 +54,8 @@ while not rospy.is_shutdown():
 	print "tempo no incio do loop " + str(millis)
 	# create a twist message with random values
 	twist = Twist()
-	twist.linear.x = 1
-	twist.linear.y = 1
+	#twist.angular.y = -1
+	twist.linear.x= 1
 		
 	# Publish the message
 	p.publish(twist)
