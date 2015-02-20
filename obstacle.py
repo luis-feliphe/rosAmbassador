@@ -44,7 +44,8 @@ p = rospy.Publisher(x, Twist)
 #rospy.Subscriber("/robot_0/base_scan",  LaserScan, scan)
 
 r = rospy.Rate(10) # hz
-
+import time
+time.sleep (int (sys.argv[2]))
 global on
 on = True
 global cont 
