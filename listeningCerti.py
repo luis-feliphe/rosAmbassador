@@ -312,7 +312,7 @@ rospy.init_node('bridge')
 #Topics that this node will subscribe
 #rospy.Subscriber("robot_0/odom",  Odometry, saveData)
 #rospy.Subscriber("robot_0/odom",  Odometry, saveData)
-rospy.Subscriber("robot_3/base_scan", LaserScan, saveScan)
+rospy.Subscriber("robot_0/base_scan", LaserScan, saveScan)
 
 #rospy.Subscriber("cmd_vel_mux/input/teleop",  Twist, getVel2)
 #rospy.Subscriber("robot_2/odom",  Odometry, getPos3)
@@ -323,7 +323,7 @@ rospy.Subscriber("robot_3/base_scan", LaserScan, saveScan)
 #rospy.Subscriber("robot_7/odom",  Odometry, getPos8)
 #rospy.Subscriber("robot_8/odom",  Odometry, getPos9)
 global p
-p = rospy.Publisher("robot_3/cmd_vel", Twist)
+p = rospy.Publisher("robot_0/cmd_vel", Twist)
 global r
 r = rospy.Rate(2) # hz
 
@@ -364,12 +364,12 @@ while not rospy.is_shutdown():
 		_goto = mya.attMap["goto"]
 		#Walk
 
-		if (_goto.count("w") > 0):
+		if (_goto.count("W") > 0):
 			twist = Twist()
 			twist.linear.x = 1
 			p.publish (twist)
 			print "Set to walk"
-		if (_goto.count("s")> 0):
+		if (_goto.count("S")> 0):
 			print "set to stop"
 			twist = Twist()
 			twist.linear.x = 0
