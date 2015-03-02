@@ -29,6 +29,12 @@ def log (valor):
 
 def scan(var):
 	print ("ranges "+ str(min(remove_fromList(var.ranges, 5.0))))
+
+getTime = lambda: int(round(time.time() * 1000))
+
+
+
+
 #############
 # ROS SETUP #
 #############
@@ -50,28 +56,44 @@ global on
 on = True
 global cont 
 cont = 0 
+
+
+###################
+#Medicao de tempo##
+###################
+iteracoes = 0.0
+tempoInicial = getTime()
 #################
 #   Main Loop   #
 #################
-while not rospy.is_shutdown():
-	#print the actual time
-	millis = int(round(time.time() * 1000))
-	#print "tempo no incio do loop " + str(millis)
-	# create a twist message with random values
-	if (on):
-		twist = Twist()
-		twist.linear.x = 1
-		twist.linear.y = 1
-		cont = cont +1
-	else:
-		twist = Twist()
-		twist.linear.x = -1
-		twist.linear.y = -1
-		cont = cont+1
-	if (cont > 200):
-		cont = 0
-		on = not on		
-	# Publish the message
-	p.publish(twist)
-	# TODO check if this sleep is necessary
-	r.sleep()
+try:
+	while not rospy.is_shutdown():
+		iteracoes+= 1
+		#print the actual time
+		millis = int(round(time.time() * 1000))
+		#print "tempo no incio do loop " + str(millis)
+		# create a twist message with random values
+		if (on):
+			twist = Twist()
+			twist.linear.x = 1
+			twist.linear.y = 1
+			cont = cont +1
+		else:
+			twist = Twist()
+			twist.linear.x = -1
+			twist.linear.y = -1
+			cont = cont+1
+		if (cont > 200):
+			cont = 0
+			on = not on		
+		# Publish the message
+		p.publish(twist)
+		# TODO check if this sleep is necessary
+		r.sleep()
+except:
+	pass
+finally:
+        tempoFinal = getTime()
+        total = tempoFinal - tempoInicial
+        print "--- Obstaculo " + str(sys.argv[1]) + "------------\ntempo de simulacao = "+ str(total) + "\nInteracoes = "+ str(iteracoes) + "\ntotal por loop " + str (total/iteracoes) + "\n\n"
+
