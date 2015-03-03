@@ -20,13 +20,9 @@ import struct
 
 ################################
 #   The  Ambassador class      #
-#TODO Move this class to other #
-# File                         #
 ################################
 
 class MyAmbassador(hla.rti.FederateAmbassador):
-#	def __init__(self, value):
-#		self._rtia = value
 	def initialize(self, value):
 		self._rtia = value
 		#Variables
