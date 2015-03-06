@@ -115,32 +115,3 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 	def timeAdvanceGrant (self, time):
 		self.advanceTime = True
 
-	########################
-	# Methods to Manage    #
-	# information from HLA #
-	# (not used)           #
-	########################
-	def getPosx (self):
-		if (self.posx == None or self.id == None) :
-			return 0
-		return self.posx
-	def getId(self):
-		if (self.posx == None or self.posy == None) :
-			return 0
-		return self.id
-	def getPosy (self):
-		if (self.posy == None or self.id == None):
-			return 0
-		return self.posy
-	def setPosx (self, pos):
-		print "set x"
-		self.posx = pos
-	def setPosy (self, pos):
-		print "set y"
-		self.posy = pos
-	def clear (self):
-		self.posx = None
-		self.posy = None
-
-
-

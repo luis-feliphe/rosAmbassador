@@ -19,13 +19,17 @@ import hla.rti
 import hla.omt as fom
 import struct
 
+#other
+#from parser import Parser
 
+isMaster=True
 
 global mya
 global on 
 on = True
 global cont
 cont = 0
+
 #####################################################
 # This Method responsible to publish data on HLA    #
 #####################################################
@@ -46,32 +50,32 @@ def sendData(idrobot ,battery="", temperature="", sensor1="", sensor2="", sensor
 		mya.activateHandle:str(activate)+" "},
 		"update")
 
-
-def getPos(odom_data, numberID):
-#Arguments: id, battery , temperature, sensor 1 , sensor 2 , sensor 3 , gps, compass, goto , rotate, activate
-#sendData(1, "", "", "", "", "", "<0;0>", "", "", "", "")
-	sendData(str(numberID, "", "", "", "", "","<" + str(odom_data.pose.pose.position.x) + ";" + str (odom_data.pose.pose.position.y) + "> " , "", "", "", "")
-
-
-
-def getVel2 (Twist):
-#Arguments: id, battery , temperature, sensor 1 , sensor 2 , sensor 3 , gps, compass, goto , rotate, activate
-	sendData(1, "", "", "", "", "", "<" + str(twist.linearx) + ";" + str (twist.linear.y) + "> "  , "", "", "", "")
-
-##############################################
-# These methods just invoque the getPos,     #
-# too many just beacause is necessary know   #
-# from each robot the message is coming      #
-##############################################
-
+###########################
+## do not remove yet ###### 
+###########################
 
 global dataToSend
 dataToSend=None
 def saveScan(data):
+	ft = mya.attMap["sensor2"]
+	if (ft.count("none")==0):
+		mapaFim[str(iteracoes)]=getTime()
 	global dataToSend
 	dataToSend = data
-def getPos1(odom_data):
-	getPos (odom_data,1)
+
+
+###############################
+## Some call backs not used  ##
+###############################
+
+#def getPos(odom_data, numberID):
+#	sendData(str(numberID, "", "", "", "", "","<" + str(odom_data.pose.pose.position.x) + ";" + str (odom_data.pose.pose.position.y) + "> " , "", "", "", "")
+
+#def getVel2 (Twist):
+#	sendData(1, "", "", "", "", "", "<" + str(twist.linearx) + ";" + str (twist.linear.y) + "> "  , "", "", "", "")
+
+#def getPos1(odom_data):
+#	getPos (odom_data,1)
        
 def log (valor):
 	print ("\033[36m" + valor + "\033[0;0m")
@@ -105,15 +109,14 @@ mya.initialize(rtia)
 log("inicialized!\n")
 
 # Announce Synchronization Point (not used by Master)
-"""   ----
-label = "ReadyToRun"
-tag =  bytes ("hi!")
-rtia.registerFederationSynchronizationPoint(label, tag)
-log("Synchronization Point Register!")
-while  (mya.isRegistered == False or mya.isAnnounced == False):
-	rtia.tick()
-print "tick"
---- """
+if (isMaster==False):
+	label = "ReadyToRun"
+	tag =  bytes ("hi!")
+	rtia.registerFederationSynchronizationPoint(label, tag)
+	log("Synchronization Point Register!")
+	while  (mya.isRegistered == False or mya.isAnnounced == False):
+		rtia.tick()
+	print "tick"
 
 #wait for others federates
 x = input ("Waiting for USERS, start aor federations then write a number and press ok.\n")
@@ -176,6 +179,11 @@ media = []
 ## Main loop  ##
 ################
 iteracoes = 0.0
+### Map para pegar o tempo 
+
+
+mapaInicio={}
+mapaFim= {}
 
 tempoInicial = getTime()
 try:
@@ -185,7 +193,8 @@ try:
 		### Bridge Sending Data to HLA  ###
 		##################################
 		if dataToSend != None:
-			sendData(1, "", "", str(min(dataToSend.ranges)), "", "", "<0;0>", "", "", "", "")
+			mapaInicio[str(iteracoes)]=getTime()
+			sendData(1, "", "", str(min(dataToSend.ranges)), str(iteracoes), "", "<0;0>", "", "", "", "")
 			dataToSend =  None
 			position = None	
 
@@ -196,16 +205,19 @@ try:
 		if mya.hasData==True:
 			_goto = mya.attMap["goto"]
 			#Walk
-
 			if (_goto.count("W") > 0):
 				twist = Twist()
+				#Comentado para teste de longa duracao
+				#twist.linear.x = 1
 				twist.linear.x = 1
+				twist.angular.z = 0.05
 				p.publish (twist)
 	
 			if (_goto.count("S")> 0):
 				#print "set to stop"
 				twist = Twist()
 				twist.linear.x = 0
+				twist.angular.z = 0
 				p.publish (twist)
 				walk = False
 			mya.hasData = False
@@ -230,6 +242,41 @@ finally:
 	print "tempo de simulacao = "+ str(total)
 	print "Interacoes = "+ str(iteracoes)
 	print "total por loop " + str (total/iteracoes)
+	print "----- tempo de mensagens--------"
+	tempo = []
+	grafico = {}
+	maxvalue = 0
+	for i in mapaInicio.iterkeys():
+		if (mapaFim.has_key(i)):
+			valuetmp = mapaFim[i]-mapaInicio[i]
+			tempo.append(valuetmp)
+			grafico[float (i)] = valuetmp
+			if float (i)> maxvalue:
+				maxvalue = float (i) 
+	eixoindice = []
+	eixovalor = []
+	for i in range (0, int(maxvalue)):
+		if grafico.has_key(i):
+			eixoindice.append(float(i))
+			eixovalor.append(float(grafico[float (i)]))
+
+	arquivo = open ("resultadoSimulacao.txt", "w")
+	for i in range (0, len (eixoindice)):
+		arquivo.write(str (eixoindice[i]) +":"+str(eixovalor[i])+"\n")
+	arquivo.close()
+#	import numpy 
+#	dp = numpy.array(tempo)
+#	print ("desvio padrao= "+ str(numpy.std(dp)))
+#	print ("media = "+ str(numpy.mean(dp)))
+#	import pylab
+#	pylab.plot(eixoindice, eixovalor)
+#	pylab.xlabel('tempo ms')
+#	pylab.ylabel('iteracao')
+#	pylab.title('Tempo de resposta ao longo das Iteracoes') 
+#	pylab.show()
+#	print float(sum(tempo)) / len (tempo)
+	
+	
 mya.terminate()
 rtia.resignFederationExecution(hla.rti.ResignAction.DeleteObjectsAndReleaseAttributes)
 print("Done.")

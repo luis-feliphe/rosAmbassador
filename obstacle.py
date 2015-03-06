@@ -56,7 +56,9 @@ global on
 on = True
 global cont 
 cont = 0 
-
+#valor padra para testes
+#way = 200
+way = 500
 
 ###################
 #Medicao de tempo##
