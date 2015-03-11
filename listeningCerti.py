@@ -59,7 +59,7 @@ dataToSend=None
 def saveScan(data):
 	ft = mya.attMap["sensor2"]
 	if (ft.count("none")==0):
-		mapaFim[str(iteracoes)]=getTime()
+		mapaFim[str(iteracoes)]=float(getTime())
 	global dataToSend
 	dataToSend = data
 
@@ -246,6 +246,8 @@ finally:
 	tempo = []
 	grafico = {}
 	maxvalue = 0
+	print (mapaInicio)
+	print (mapaFim)
 	for i in mapaInicio.iterkeys():
 		if (mapaFim.has_key(i)):
 			valuetmp = mapaFim[i]-mapaInicio[i]
@@ -257,8 +259,8 @@ finally:
 	eixovalor = []
 	for i in range (0, int(maxvalue)):
 		if grafico.has_key(i):
-			eixoindice.append(float(i))
-			eixovalor.append(float(grafico[float (i)]))
+			eixoindice.append(int(i))
+			eixovalor.append(int(grafico[float (i)]))
 
 	arquivo = open ("resultadoSimulacao.txt", "w")
 	for i in range (0, len (eixoindice)):
