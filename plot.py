@@ -19,9 +19,9 @@ pylab.xlabel('Iteracao')
 pylab.ylabel('Tempo (ms)')
 pylab.title('Tempo de resposta ao longo das Iteracoes') 
 pylab.show()
-print float(sum(tempo)) / len (tempo)
+#print float(sum(tempo)) / len (tempo)
 	
 	
-mya.terminate()
-rtia.resignFederationExecution(hla.rti.ResignAction.DeleteObjectsAndReleaseAttributes)
-print("Done.")
+#mya.terminate()
+#rtia.resignFederationExecution(hla.rti.ResignAction.DeleteObjectsAndReleaseAttributes)
+#print("Done.")

@@ -57,11 +57,16 @@ def sendData(idrobot ,battery="", temperature="", sensor1="", sensor2="", sensor
 global dataToSend
 dataToSend=None
 def saveScan(data):
-	ft = mya.attMap["sensor2"]
-	if (ft.count("none")==0):
-		mapaFim[str(iteracoes)]=float(getTime())
+#	if mya.attMap.has_key("sensor2"):
+#		ft = mya.attMap["sensor2"]
+#		if (ft.count("none")==0):
+#			mapaFim[str(iteracoes)]=float(getTime())
 	global dataToSend
 	dataToSend = data
+#	else:
+#		print "Ocorreu um erro, o valor sensor2 nao veio"
+#		print (mya.attMap)
+#		print "-----------------------------------------\n"
 
 
 ###############################
@@ -136,12 +141,14 @@ log ("MyAmbassador : Is Ready to run ")
 # Enable Time Policy
 currentTime =rtia.queryFederateTime()
 lookAhead =1# rtia.queryLookahead()
+#### C OMENTANDO PARA VERIFICAR TEMPO #####################
 rtia.enableTimeRegulation(currentTime, lookAhead)
 while (mya.isRegulating == False):
 	rtia.tick()
 rtia.enableTimeConstrained()
 while (mya.isConstrained == False):
 	rtia.tick()
+##########################################################
 log("MyAmbassador: Time is Regulating and is Constrained")
 
 
@@ -204,6 +211,9 @@ try:
 		######################################
 		if mya.hasData==True:
 			_goto = mya.attMap["goto"]
+			_tempo = mya.attMap["time"]
+			_iteracoes = mya.attMap["sensor2"]
+			mapaFim[str(_iteracoes)]=float (_tempo)
 			#Walk
 			if (_goto.count("W") > 0):
 				twist = Twist()
@@ -232,7 +242,7 @@ try:
 		mya.advanceTime = False
 		#################################
 	#		_time = int(round(time.time()*1000))
-		r.sleep()
+		#r.sleep()
 except:	
 	print ("finalizando simulacao")
 finally:
@@ -246,8 +256,9 @@ finally:
 	tempo = []
 	grafico = {}
 	maxvalue = 0
-	print (mapaInicio)
-	print (mapaFim)
+	#print (mapaInicio)
+	#print "mapa fim"
+	#print (mapaFim)
 	for i in mapaInicio.iterkeys():
 		if (mapaFim.has_key(i)):
 			valuetmp = mapaFim[i]-mapaInicio[i]

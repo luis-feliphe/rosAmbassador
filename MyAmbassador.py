@@ -22,6 +22,9 @@ import struct
 #   The  Ambassador class      #
 ################################
 
+import time
+getTime = lambda: int(round(time.time() * 1000))
+
 class MyAmbassador(hla.rti.FederateAmbassador):
 	def initialize(self, value):
 		self._rtia = value
@@ -62,14 +65,14 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 	###########################
 	#Calbacks from CERTI - HLA#
 	###########################
-	def reflectAttributeValues(self, object, attributes, tag, order, transport, time=None, retraction=None):
-
-		self.attMap["time"] = self._rtia.queryFederateTime()
+	def reflectAttributeValues(self, object, attributes, tag, order, transport, time, retraction=None):
+		#self.attMap["time"] = self._rtia.queryFederateTime()
+		self.attMap["time"] = getTime()
 		self.attMap["id"] = attributes[self.idHandle]
 		self.attMap["battery"]= attributes[self.batteryHandle]
                 self.attMap["temperature"]= attributes[self.temperatureHandle]
 		self.attMap["sensor1"]= attributes[self.sensor1Handle]
-		self.attMap["sensor2"]= attributes[self.sensor2Handle]
+		self.attMap["sensor2"]= attributes[self.sensor2Handle].replace("sensor2:","").replace("\x00","")
 		self.attMap["sensor3"]= attributes[self.sensor3Handle]
                 self.attMap["gps"] = attributes[self.gpsHandle]
                 self.attMap["compass"] = attributes[self.compassHandle]
