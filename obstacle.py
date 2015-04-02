@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+freq = 1500
 ######################################
 # This file simulate a robot on ROS. #
 # To use, you need to pass like      #
@@ -69,7 +70,7 @@ rospy.Subscriber(value2, LaserScan, dire)
 print "inciiando como robot"
 print value1
 
-r = rospy.Rate(1) # hz
+r = rospy.Rate(freq) # hz
 import time
 time.sleep (int (sys.argv[2]))
 global on
@@ -126,7 +127,7 @@ try:
 				twist.linear.y = -1
 		p.publish(twist)
 		# TODO check if this sleep is necessary
-		#r.sleep()
+		r.sleep()
 except:
 	pass
 finally:

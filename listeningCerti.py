@@ -30,25 +30,28 @@ on = True
 global cont
 cont = 0
 
+
+
+
 #####################################################
-# This Method responsible to publish data on HLA    #
+# This Method responsible to publish data on HLA #
 #####################################################
 #Arguments: id, battery , temperature, sensor 1 , sensor 2 , sensor 3 , gps, compass, goto , rotate, activate
 def sendData(idrobot ,battery="", temperature="", sensor1="", sensor2="", sensor3="", gps="<0,0>",compass="", goto="", rotate="", activate=""):
-	global mya
-	rtia.updateAttributeValues(mya.myObject,
-		{mya.idHandle:str(idrobot)+" ",
-		mya.batteryHandle:str(battery)+" ",
-		mya.temperatureHandle: str(temperature)+" ",
-		mya.sensor1Handle:str(sensor1)+" ",
-		mya.sensor2Handle:str(sensor2)+" ",
-		mya.sensor3Handle:str(sensor3)+" ",
-		mya.gpsHandle: str (gps)+" ",
-		mya.compassHandle:str(compass)+" ",
-		mya.gotoHandle:str(goto)+" ",
-		mya.rotateHandle:str(rotate)+" " ,
-		mya.activateHandle:str(activate)+" "},
-		"update")
+global mya
+rtia.updateAttributeValues(mya.myObject,
+{mya.idHandle:str(idrobot)+" ",
+mya.batteryHandle:str(battery)+" ",
+mya.temperatureHandle: str(temperature)+" ",
+mya.sensor1Handle:str(sensor1)+" ",
+mya.sensor2Handle:str(sensor2)+" ",
+mya.sensor3Handle:str(sensor3)+" ",
+mya.gpsHandle: str (gps)+" ",
+mya.compassHandle:str(compass)+" ",
+mya.gotoHandle:str(goto)+" ",
+mya.rotateHandle:str(rotate)+" " ,
+mya.activateHandle:str(activate)+" "},
+"update")
 
 ###########################
 ## do not remove yet ###### 
@@ -141,7 +144,7 @@ log ("MyAmbassador : Is Ready to run ")
 # Enable Time Policy
 currentTime =rtia.queryFederateTime()
 lookAhead =1# rtia.queryLookahead()
-#### C OMENTANDO PARA VERIFICAR TEMPO #####################
+### C OMENTANDO PARA VERIFICAR TEMPO #####################
 rtia.enableTimeRegulation(currentTime, lookAhead)
 while (mya.isRegulating == False):
 	rtia.tick()
