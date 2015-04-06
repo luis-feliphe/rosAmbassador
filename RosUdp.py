@@ -12,7 +12,9 @@ global SERVERPORT
 SERVERPORT =  "6000"   #the port users will be connecting to
 
 global V
+V = 0.0
 global W
+W = 0.0
 global myNumber
 global x
 global y 
@@ -32,7 +34,7 @@ def send_data(mynumber, port):
 	global y
 	global q3
 	global q4
-	message = str(mynumber)+" "+ str(0.0)+" "+str(0.0)+" "+str(x)+" "+str(y)+" "+str(q3)+" "+str(q4)
+	message = str(mynumber)+" "+ str(V)+" "+str(W)+" "+str(x)+" "+str(y)+" "+str(q3)+" "+str(q4)
 	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	sock.sendto(message, ("127.0.0.1", int (port)))
 	sock.close()
@@ -58,6 +60,7 @@ def imu_data (data):
 #//Lê do ROS os valores da velocidade linear e angular: V e W 
 #//Subscribe no Topico cmd_vel_mux/input/teleop
 def  cmd_vel_callback(vel_cmd):
+	print "cmd vel capturado"
 	global V
 	V = vel_cmd.linear.x;
 	global W
@@ -67,6 +70,7 @@ def  cmd_vel_callback(vel_cmd):
 #Lê do ROS os valores de posição: x, y e teta
 #Subscribe no Topico odom + Send Data
 def odomCallback(odom, numberRobot, porta):
+	print "odom funcionando " + str (numberRobot)
 	global x
 	global y
 	global q1
@@ -89,31 +93,31 @@ def odomCallback3(odom):
 	odomCallback(odom, 3, "6003")
 
 
-global V
 
 import rospy
 
 rospy.init_node('PublisherTurtle')
 
-rospy.Subscriber("/commands/velocity", LaserScan, cmd_vel_callback)
+rospy.Subscriber("/commands/velocity", Twist, cmd_vel_callback)
 rospy.Subscriber("/odom", Odometry, odomCallback1)
 rospy.Subscriber("/sensors/imu_data", Imu, imu_data)
 
-rospy.Subscriber("/robot1/commands/velocity", LaserScan, cmd_vel_callback)
-rospy.Subscriber("/robot1/odom", Odometry, odomCallback1)
+rospy.Subscriber("/robot_0/cmd_vel", Twist, cmd_vel_callback)
+rospy.Subscriber("/robot_0/odom", Odometry, odomCallback1)
 rospy.Subscriber("/robot1/sensors/imu_data", Imu, imu_data)
 
-rospy.Subscriber("/robot2/commands/velocity", LaserScan, cmd_vel_callback)
-rospy.Subscriber("/robot2/odom", Odometry, odomCallback2)
+rospy.Subscriber("/robot_1/cmd_vel", Twist, cmd_vel_callback)
+rospy.Subscriber("/robot_1/odom", Odometry, odomCallback2)
 rospy.Subscriber("/robot2/sensors/imu_data", Imu, imu_data)
 
-rospy.Subscriber("/robot3/commands/velocity", LaserScan, cmd_vel_callback)
-rospy.Subscriber("/robot3/odom", Odometry, odomCallback3)
+rospy.Subscriber("/robot_2/cmd_vel", Twist, cmd_vel_callback)
+rospy.Subscriber("/robot_2/odom", Odometry, odomCallback3)
 rospy.Subscriber("/robot3/sensors/imu_data", Imu, imu_data)
+
 p = rospy.Publisher("/mobile_base/commands/velocity", Twist)
-p1 = rospy.Publisher("/robot1/commands/velocity", Twist)
-p2 = rospy.Publisher("/robot2/commands/velocity", Twist)
-p3 = rospy.Publisher("/robot3/commands/velocity", Twist)
+p1 = rospy.Publisher("/robot_0/cmd_vel", Twist)
+p2 = rospy.Publisher("/robot_1/cmd_vel", Twist)
+p3 = rospy.Publisher("/robot_2/cmd_vel", Twist)
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(("127.0.0.1", 6001))
@@ -124,5 +128,12 @@ while not rospy.is_shutdown():
 	twist = Twist()
 	twist.linear.x = float (V)
 	twist.angular.z = float (W) 
-	p.publish(twist)
+	if (robotId == "1"):
+		p1.publish(twist)
+	elif (robotId == "2"):
+		p2.publish (twist)
+	elif (robotId== "3"):
+		p3.publish (twist)
+	else:
+		print "robot was not configurated"
 
