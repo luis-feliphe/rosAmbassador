@@ -129,7 +129,7 @@ while not rospy.is_shutdown():
 	twist.linear.x = float (V)
 	twist.angular.z = float (W) 
 	if (robotId == "1"):
-		p1.publish(twist)
+		p.publish(twist)
 	elif (robotId == "2"):
 		p2.publish (twist)
 	elif (robotId== "3"):
