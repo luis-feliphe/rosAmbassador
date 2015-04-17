@@ -104,13 +104,13 @@ def isOriented():
 		tmp2 = math.hypot( y -my, 0 )
 		cat = max ([tmp1, tmp2])
 		anguloEsperado = math.degrees(math.cos(float(cat)/hip))
-		print "deslocamento " + str (anguloEsperado) + " cateto " + str (cat) + " hip " + str (hip)
+		#print "deslocamento " + str (anguloEsperado) + " cateto " + str (cat) + " hip " + str (hip)
 		deltax = x - mx
 		deltay = y - my
 		deltax = abs(deltax)
 		deltay = abs(deltay)
-		print "delta y = " + str (deltay)
-		print "delta x = " + str (deltax)
+		#print "delta y = " + str (deltay)
+		#print "delta x = " + str (deltax)
 		if (deltax<0.4) and y > my:
 			anguloEsperado = 270
 		elif (deltax<0.4) and y < my:
@@ -118,7 +118,7 @@ def isOriented():
 		elif (deltay<0.4) and mx < x:
 			anguloEsperado = 180
 		elif (deltay<0.4) and mx > x:
-			print "era pra andar pra esquerda"
+			#print "era pra andar pra esquerda"
 			anguloEsperado = 0
 		elif mx < x and my <=y:
 			anguloEsperado += 180 
@@ -131,7 +131,7 @@ def isOriented():
 		mz =  mz + 180
 		a = max ([anguloEsperado, mz])
 		b = min ([anguloEsperado , mz])
-		print "values " + str (anguloEsperado) + " - " + str (mz) + " = " + str (a - b)
+		#print "values " + str (anguloEsperado) + " - " + str (mz) + " = " + str (a - b)
 		if ((a - b) < 8):
 			return True , anguloEsperado, mz
 		return False , anguloEsperado, mz
@@ -165,20 +165,20 @@ def walk ():
 		if (not inPosition()):
 			orient, ang, mz = isOriented()
 			if (orient):
-				print "is oriented"
+				#print "is oriented"
 				return walkon()
 			print "is not"
 			if (ang > mz ):
-				print "valor que eu quero ir " + str (ang) + " eh maior que o meu " + str (mz)
-				print " anti horario "
+				#print "valor que eu quero ir " + str (ang) + " eh maior que o meu " + str (mz)
+				#print " anti horario "
 				return walkantihorario()
 			else:
-				print "valor que eu quero ir " + str (ang) + " eh menor que o meu " + str (mz)
-				print "horario "
+				#print "valor que eu quero ir " + str (ang) + " eh menor que o meu " + str (mz)
+				#print "horario "
 				return walkhorario()
 		else:
 			return Twist()
-			print "stop"
+			#print "stop"
 
 
 def getpos(robotId, odom):
@@ -187,6 +187,7 @@ def getpos(robotId, odom):
 
 def getPos0(w):
 	getpos(0, w)
+	print (60 + math.degrees(w.pose.pose.orientation.z))
 def getPos1(odom):
 	getpos(1, odom)
 def getPos2(odom):

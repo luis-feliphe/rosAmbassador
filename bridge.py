@@ -19,6 +19,7 @@ import hla.rti
 import hla.omt as fom
 import struct
 
+import string
 #other
 #from parser import Parser
 
@@ -37,7 +38,8 @@ cont = 0
 # This Method responsible to publish data on HLA #
 #####################################################
 #Arguments: id, battery , temperature, sensor 1 , sensor 2 , sensor 3 , gps, compass, goto , rotate, activate
-def sendData(idrobot ,battery="", temperature="", sensor1="", sensor2="", sensor3="", gps="<0,0>",compass="", goto="", rotate="", activate=""):
+def sendData(idrobot ,battery="", temperature="", sensor1="", sensor2="", sensor3="", gps="<0;0>",compass="", goto="", rotate="", activate=""):
+	#print ("enviando " + str (sensor1) + " "  + str(sensor2)  + " " + str(sensor3)  + " " + str(gps))
 	global mya
 	rtia.updateAttributeValues(mya.myObject,
 	{mya.idHandle:str(idrobot)+" ",
@@ -166,11 +168,28 @@ rospy.init_node('bridge')
 
 #Topics that this node will subscribe
 #rospy.Subscriber("robot_0/odom",  Odometry, saveData)
-rospy.Subscriber("robot_0/base_scan", LaserScan, saveScan)
+#rospy.Subscriber("robot_0/base_scan", LaserScan, saveScan)
+
+global positions
+positions = {}
+def getPos0(odom):
+	global positions
+	positions["leader"] = [odom.pose.pose.position.x, odom.pose.pose.position.y, odom.pose.pose.orientation.w]
+def getPos1(odom):
+	global positions
+	positions["my"] = [odom.pose.pose.position.x, odom.pose.pose.position.y, odom.pose.pose.orientation.w]
+
+def hasDataToHLA():
+	global positions
+	return positions.has_key("my") and positions.has_key("leader")
+
+rospy.Subscriber("/robot_0/base_pose_ground_truth",  Odometry, getPos0)
+rospy.Subscriber("/robot_1/base_pose_ground_truth",  Odometry, getPos1)
+#rospy.Subscriber("/robot_2/base_pose_ground_truth",  Odometry, getPos2)
 
 #rospy.Subscriber("cmd_vel_mux/input/teleop",  Twist, getVel2)
 global p
-p = rospy.Publisher("robot_0/cmd_vel", Twist)
+p = rospy.Publisher("robot_1/cmd_vel", Twist)
 global r
 r = rospy.Rate(10) # hz
 
@@ -195,6 +214,9 @@ iteracoes = 0.0
 mapaInicio={}
 mapaFim= {}
 
+
+
+
 tempoInicial = getTime()
 try:
 	while not rospy.is_shutdown():
@@ -202,10 +224,11 @@ try:
 		###################################
 		### Bridge Sending Data to HLA  ###
 		##################################
-		if dataToSend != None:
+		if hasDataToHLA():
+			global positions
 			mapaInicio[str(iteracoes)]=getTime()
-			sendData(1, "", "", str(min(dataToSend.ranges)), str(iteracoes), "", "<0;0>", "", "", "", "")
-			dataToSend =  None
+			sendData(1, "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(positions["my"][0])+   ";"  + str(positions["my"][1]) + ";" + str(positions["my"][2])+ ">", "", "", "", "")
+			positions = {}
 			position = None	
 
 
@@ -218,23 +241,20 @@ try:
 			_iteracoes = mya.attMap["sensor2"]
 			mapaFim[str(_iteracoes)]=float (_tempo)
 			#Walk
-			if (_goto.count("W") > 0):
+			if (_goto.count("none")<1):
+				print (str (_goto))
+				_goto = _goto.replace("\\", "")
+				_goto = _goto.replace("\"", "")
+				lin, ang = _goto.split(";")
+				safe_chars = string.digits + '-'
+				ang = ''.join([char if char in safe_chars else '' for char in ang])
+				lin = ''.join([char if char in safe_chars else '' for char in lin])
 				twist = Twist()
-				#Comentado para teste de longa duracao
-				#twist.linear.x = 1
-				twist.linear.x = 1
-				twist.angular.z = 0.05
+				twist.linear.x = int (lin)
+				twist.angular.z = int (ang)
 				p.publish (twist)
-	
-			if (_goto.count("S")> 0):
-				#print "set to stop"
-				twist = Twist()
-				twist.linear.x = 0
-				twist.angular.z = 0
-				p.publish (twist)
-				walk = False
-			mya.hasData = False
-			mya.attMap = {}
+			#mya.hasData = False
+			#mya.attMap = {}
 
 		#######  Time Management  ########
 		timeHLA = rtia.queryFederateTime() + 1
@@ -246,7 +266,8 @@ try:
 		#################################
 	#		_time = int(round(time.time()*1000))
 		#r.sleep()
-except:	
+except Exception :
+	raise	
 	print ("finalizando simulacao")
 finally:
 	tempoFinal = getTime()
