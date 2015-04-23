@@ -18,6 +18,7 @@ import random
 import sys
 import time
 ####
+from tf.transformations import euler_from_quaternion
 import tf
 import struct
 from datetime import datetime
@@ -39,7 +40,8 @@ global posicoes
 posicoes= {}
 
 
-
+def degrees(value):
+	return  math.degrees(value)#((value* 180.0)/math.pi)
 
 def whereImGoing():
 	global myId
@@ -64,13 +66,13 @@ def walkon():
 
 def walkhorario():
 	t = Twist()
-	t.angular.z = -1
+	t.angular.z = -0.5
 	#t.linear.x = 0.2
 	return t
 
 def walkantihorario():
 	t = Twist()
-	t.angular.z = 1
+	t.angular.z = 0.5
 	#t.linear.x = 0.2
 	return t
 def walkback():
@@ -93,57 +95,66 @@ def myPosition():
 import math
 
 def isOriented():
-	
 	x, y = whereImGoing()
 	mx, my, mz = myPosition()
 	#print str (mx) + " " + str(my)
 	if (not (mx == 0 and my == 0)):
-		hip = math.hypot (x - mx, y - my)
-		cat = max([x, mx]) - min ([x, mx])
+		#calcula a distancia entre meu ponto e o ponto que quero ir
+		hip = math.hypot (x - mx, y - my) 
+		#cat = max([x, mx]) - min ([x, mx])
+		#calcula a distancia dos dois catetos
 		tmp1 = math.hypot( x -mx, 0 )
-		tmp2 = math.hypot( y -my, 0 )
+		tmp2 = math.hypot( 0, y -my )
+		#seleciona o maior cateto
 		cat = max ([tmp1, tmp2])
+		#calcula o angulo que preciso estar para
 		anguloEsperado = math.degrees(math.cos(float(cat)/hip))
-		#print "deslocamento " + str (anguloEsperado) + " cateto " + str (cat) + " hip " + str (hip)
+		print "deslocamento " + str (anguloEsperado) + " cateto " + str (cat) + " hip " + str (hip) + "meu x=" + str (mx) + " meu y=" + str (my)  + " X= " + str (x) + " Y= " + str (y)
 		deltax = x - mx
 		deltay = y - my
 		deltax = abs(deltax)
 		deltay = abs(deltay)
 		#print "delta y = " + str (deltay)
 		#print "delta x = " + str (deltax)
-		if (deltax<0.4) and y > my:
-			anguloEsperado = 270
-		elif (deltax<0.4) and y < my:
+		#print anguloEsperado
+		if (deltax<0.19) and y > my:
 			anguloEsperado = 90
-		elif (deltay<0.4) and mx < x:
-			anguloEsperado = 180
-		elif (deltay<0.4) and mx > x:
-			#print "era pra andar pra esquerda"
+		elif (deltax<0.19) and y < my:
+			anguloEsperado = 270
+		elif (deltay<0.19) and mx < x:
 			anguloEsperado = 0
+		elif (deltay<0.19) and mx > x:
+			#print "era pra andar pra esquerda"
+			anguloEsperado = 180
 		elif mx < x and my <=y:
-			anguloEsperado += 180 
+			pass#anguloEsperado += 180 
 		elif mx < x and my >= y:
-			anguloEsperado = 180 - anguloEsperado
+			anguloEsperado= anguloEsperado +270# = 180 - anguloEsperado
 		elif mx > x and my <= y:
-			anguloEsperado = 360 - anguloEsperado
+			anguloEsperado= anguloEsperado + 90# = 360 - anguloEsperado
 		elif mx > x and my >= y: 
-			anguloEsperado = anguloEsperado
-		mz =  mz + 180
+			anguloEsperado =anguloEsperado + 180# anguloEsperado
+		#mz =  mz + 180
 		a = max ([anguloEsperado, mz])
 		b = min ([anguloEsperado , mz])
-		#print "values " + str (anguloEsperado) + " - " + str (mz) + " = " + str (a - b)
-		if ((a - b) < 8):
+		print "values " + str (anguloEsperado) + " - " + str (mz) + " = " + str (a - b)
+		limin = 3
+		if ((a - b) < limin or ((a-b)>(360-limin))):
 			return True , anguloEsperado, mz
-		return False , anguloEsperado, mz
+		return False, anguloEsperado, mz
 	return False, 1000, 800
+
+
 
 def ajustOrientation():
 	lx, ly, lz = leaderPosition()
 	mx, my , mz = myPosition()
 	if (not (abs(lz - mz)< 4)):
 		if (lz > mz ):#Must adjustment
+			print "andar no antihorario"
 			return walkantihorario()
 		else:
+			print "andar no horario"
 			return walkhorario()
 	return Twist()
 
@@ -167,14 +178,18 @@ def walk ():
 			if (orient):
 				#print "is oriented"
 				return walkon()
-			print "is not"
-			if (ang > mz ):
+
+			#a = max([ang, mz])
+			#b = min([ang, mz])
+			#total = ang - mz
+			#if (total>180):
+			if ((ang - mz) > 0 and (ang-mz) < 180):
 				#print "valor que eu quero ir " + str (ang) + " eh maior que o meu " + str (mz)
-				#print " anti horario "
+				print " anti horario " + str (ang) + " - "  + str (mz) + " = " + str (ang-mz)
 				return walkantihorario()
 			else:
 				#print "valor que eu quero ir " + str (ang) + " eh menor que o meu " + str (mz)
-				#print "horario "
+				print "horario "
 				return walkhorario()
 		else:
 			return Twist()
@@ -187,7 +202,16 @@ def getpos(robotId, odom):
 
 def getPos0(w):
 	getpos(0, w)
-	print (60 + math.degrees(w.pose.pose.orientation.z))
+
+def getDegreesFromOdom(w):
+	#TODO: HOW CONVERT DATA TO ANGLES
+	q = [w.pose.pose.orientation.x,	w.pose.pose.orientation.y, w.pose.pose.orientation.z, w.pose.pose.orientation.w]       
+        euler_angles = euler_from_quaternion(q, axes='sxyz')
+	current_angle = euler_angles[2]
+	if current_angle < 0:
+		current_angle = 2 * math.pi + current_angle
+	return math.degrees(current_angle)
+		
 def getPos1(odom):
 	getpos(1, odom)
 def getPos2(odom):
@@ -197,19 +221,19 @@ def getPos2(odom):
 global last
 last = 0
 def getxy (odom):
-	global last
-	teste = [odom.pose.pose.orientation.x, odom.pose.pose.orientation.y, odom.pose.pose.orientation.z, odom.pose.pose.orientation.w]
-	euler = tf.transformations.euler_from_quaternion(teste)
-	yall = euler[2]
+	#global last
+	#teste = [odom.pose.pose.orientation.x, odom.pose.pose.orientation.y, odom.pose.pose.orientation.z, odom.pose.pose.orientation.w]
+	#euler = tf.transformations.euler_from_quaternion(teste)
+	#yall = euler[2]
 	#print ("Geting orientation")
 	#print odom.pose.pose.orientation.z
 	#print odom.pose.pose.orientation.w
-	if (not (yall == last)):
-		temp = (yall * 180)/ 3.14
+	#if (not (yall == last)):
+	#	temp = (yall * 180)/ 3.14
 	#print ("\n")
-	last = yall
+	#last = yall
 	#print str (temp) + " "  + str (math.degrees(yall))
-	return odom.pose.pose.position.x, odom.pose.pose.position.y, math.degrees(yall)
+	return odom.pose.pose.position.x, odom.pose.pose.position.y, getDegreesFromOdom (odom)#degrees(yall)
 
 #############
 # ROS SETUP #
