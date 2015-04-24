@@ -10,6 +10,7 @@ import rospy
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
+from tf.transformations import euler_from_quaternion
 
 import random
 
@@ -20,6 +21,7 @@ import hla.omt as fom
 import struct
 
 import string
+import math
 #other
 #from parser import Parser
 
@@ -30,6 +32,17 @@ global on
 on = True
 global cont
 cont = 0
+
+
+
+def getDegreesFromOdom(w):
+        #TODO: HOW CONVERT DATA TO ANGLES
+        q = [w.pose.pose.orientation.x, w.pose.pose.orientation.y, w.pose.pose.orientation.z, w.pose.pose.orientation.w]
+        euler_angles = euler_from_quaternion(q, axes='sxyz')
+        current_angle = euler_angles[2]
+        if current_angle < 0:
+                current_angle = 2 * math.pi + current_angle
+        return math.degrees(current_angle)
 
 
 
@@ -177,7 +190,7 @@ def getPos0(odom):
 	positions["leader"] = [odom.pose.pose.position.x, odom.pose.pose.position.y, odom.pose.pose.orientation.w]
 def getPos1(odom):
 	global positions
-	positions["my"] = [odom.pose.pose.position.x, odom.pose.pose.position.y, odom.pose.pose.orientation.w]
+	positions["my"] = [odom.pose.pose.position.x, odom.pose.pose.position.y, getDegreesFromOdom(odom)]
 
 def hasDataToHLA():
 	global positions
@@ -190,8 +203,8 @@ rospy.Subscriber("/robot_1/base_pose_ground_truth",  Odometry, getPos1)
 #rospy.Subscriber("cmd_vel_mux/input/teleop",  Twist, getVel2)
 global p
 p = rospy.Publisher("robot_1/cmd_vel", Twist)
-global r
-r = rospy.Rate(10) # hz
+#global r
+#r = rospy.Rate(10) # hz
 
 parada = 0
 cont = 0
@@ -242,7 +255,7 @@ try:
 			mapaFim[str(_iteracoes)]=float (_tempo)
 			#Walk
 			if (_goto.count("none")<1):
-				print (str (_goto))
+				#print (str (_goto))
 				_goto = _goto.replace("\\", "")
 				_goto = _goto.replace("\"", "")
 				lin, ang = _goto.split(";")
@@ -253,8 +266,8 @@ try:
 				twist.linear.x = int (lin)
 				twist.angular.z = int (ang)
 				p.publish (twist)
-			#mya.hasData = False
-			#mya.attMap = {}
+			mya.hasData = False
+			mya.attMap = {}
 
 		#######  Time Management  ########
 		timeHLA = rtia.queryFederateTime() + 1
@@ -265,7 +278,7 @@ try:
 		mya.advanceTime = False
 		#################################
 	#		_time = int(round(time.time()*1000))
-		#r.sleep()
+#		r.sleep()
 except Exception :
 	raise	
 	print ("finalizando simulacao")

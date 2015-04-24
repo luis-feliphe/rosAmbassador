@@ -109,7 +109,7 @@ def isOriented():
 		cat = max ([tmp1, tmp2])
 		#calcula o angulo que preciso estar para
 		anguloEsperado = math.degrees(math.cos(float(cat)/hip))
-		print "deslocamento " + str (anguloEsperado) + " cateto " + str (cat) + " hip " + str (hip) + "meu x=" + str (mx) + " meu y=" + str (my)  + " X= " + str (x) + " Y= " + str (y)
+		#print "deslocamento " + str (anguloEsperado) + " cateto " + str (cat) + " hip " + str (hip) + "meu x=" + str (mx) + " meu y=" + str (my)  + " X= " + str (x) + " Y= " + str (y)
 		deltax = x - mx
 		deltay = y - my
 		deltax = abs(deltax)
@@ -137,7 +137,7 @@ def isOriented():
 		#mz =  mz + 180
 		a = max ([anguloEsperado, mz])
 		b = min ([anguloEsperado , mz])
-		print "values " + str (anguloEsperado) + " - " + str (mz) + " = " + str (a - b)
+		#print "values " + str (anguloEsperado) + " - " + str (mz) + " = " + str (a - b)
 		limin = 3
 		if ((a - b) < limin or ((a-b)>(360-limin))):
 			return True , anguloEsperado, mz
@@ -151,10 +151,10 @@ def ajustOrientation():
 	mx, my , mz = myPosition()
 	if (not (abs(lz - mz)< 4)):
 		if (lz > mz ):#Must adjustment
-			print "andar no antihorario"
+			#print "andar no antihorario"
 			return walkantihorario()
 		else:
-			print "andar no horario"
+			#print "andar no horario"
 			return walkhorario()
 	return Twist()
 
@@ -185,11 +185,11 @@ def walk ():
 			#if (total>180):
 			if ((ang - mz) > 0 and (ang-mz) < 180):
 				#print "valor que eu quero ir " + str (ang) + " eh maior que o meu " + str (mz)
-				print " anti horario " + str (ang) + " - "  + str (mz) + " = " + str (ang-mz)
+				#print " anti horario " + str (ang) + " - "  + str (mz) + " = " + str (ang-mz)
 				return walkantihorario()
 			else:
 				#print "valor que eu quero ir " + str (ang) + " eh menor que o meu " + str (mz)
-				print "horario "
+				#print "horario "
 				return walkhorario()
 		else:
 			return Twist()
@@ -264,10 +264,32 @@ rospy.Subscriber("robot_" + str(myId) + "/base_scan", LaserScan, saveScan)
 #   Main Loop   #
 #################
 
+
+
+mapaInicio={}
+mapaFim= {}
+
+
+
+
 iteracoes = 0.0
 tempoInicial = getTime()
-while not rospy.is_shutdown():
-	iteracoes += 1
-	t = walk()
-	p.publish(t)
-	r.sleep()
+try:
+	while not rospy.is_shutdown():
+		iteracoes += 1
+		t = walk()
+		p.publish(t)
+		r.sleep()
+except Exception :
+	raise	
+	print ("Finalizando simulacao ")
+finally:
+	tempoFinal = getTime()
+	total = tempoFinal - tempoInicial
+	print "--------- Ponte -------------"
+	print "tempo de simulacao = "+ str(total)
+	print "Interacoes = "+ str(iteracoes)
+	print "total por loop " + str (total/iteracoes)
+	print "----- tempo de mensagens--------"
+
+#

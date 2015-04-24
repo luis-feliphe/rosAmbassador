@@ -60,7 +60,7 @@ def imu_data (data):
 #//Lê do ROS os valores da velocidade linear e angular: V e W 
 #//Subscribe no Topico cmd_vel_mux/input/teleop
 def  cmd_vel_callback(vel_cmd):
-	print "cmd vel capturado"
+	#print "cmd vel capturado"
 	global V
 	V = vel_cmd.linear.x;
 	global W
@@ -70,7 +70,7 @@ def  cmd_vel_callback(vel_cmd):
 #Lê do ROS os valores de posição: x, y e teta
 #Subscribe no Topico odom + Send Data
 def odomCallback(odom, numberRobot, porta):
-	print "odom funcionando " + str (numberRobot)
+	#print "odom funcionando " + str (numberRobot)
 	global x
 	global y
 	global q1
@@ -100,21 +100,21 @@ rospy.init_node('PublisherTurtle')
 
 rospy.Subscriber("/commands/velocity", Twist, cmd_vel_callback)
 rospy.Subscriber("/odom", Odometry, odomCallback1)
-rospy.Subscriber("/sensors/imu_data", Imu, imu_data)
+#rospy.Subscriber("/sensors/imu_data", Imu, imu_data)
 
 rospy.Subscriber("/robot_0/cmd_vel", Twist, cmd_vel_callback)
 rospy.Subscriber("/robot_0/odom", Odometry, odomCallback1)
-rospy.Subscriber("/robot1/sensors/imu_data", Imu, imu_data)
+#rospy.Subscriber("/robot1/sensors/imu_data", Imu, imu_data)
 
-rospy.Subscriber("/robot_1/cmd_vel", Twist, cmd_vel_callback)
-rospy.Subscriber("/robot_1/odom", Odometry, odomCallback2)
-rospy.Subscriber("/robot2/sensors/imu_data", Imu, imu_data)
+#rospy.Subscriber("/robot_1/cmd_vel", Twist, cmd_vel_callback)
+#rospy.Subscriber("/robot_1/odom", Odometry, odomCallback2)
+#rospy.Subscriber("/robot2/sensors/imu_data", Imu, imu_data)
 
-rospy.Subscriber("/robot_2/cmd_vel", Twist, cmd_vel_callback)
-rospy.Subscriber("/robot_2/odom", Odometry, odomCallback3)
-rospy.Subscriber("/robot3/sensors/imu_data", Imu, imu_data)
+#rospy.Subscriber("/robot_2/cmd_vel", Twist, cmd_vel_callback)
+#rospy.Subscriber("/robot_2/odom", Odometry, odomCallback3)
+#rospy.Subscriber("/robot3/sensors/imu_data", Imu, imu_data)
 
-p = rospy.Publisher("/mobile_base/commands/velocity", Twist)
+#p = rospy.Publisher("/mobile_base/commands/velocity", Twist)
 p1 = rospy.Publisher("/robot_0/cmd_vel", Twist)
 p2 = rospy.Publisher("/robot_1/cmd_vel", Twist)
 p3 = rospy.Publisher("/robot_2/cmd_vel", Twist)
@@ -129,7 +129,7 @@ while not rospy.is_shutdown():
 	twist.linear.x = float (V)
 	twist.angular.z = float (W) 
 	if (robotId == "1"):
-		p.publish(twist)
+		p1.publish(twist)
 	elif (robotId == "2"):
 		p2.publish (twist)
 	elif (robotId== "3"):
