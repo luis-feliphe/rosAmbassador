@@ -4,7 +4,7 @@
 # This code is responsible by listen events on ROS  #
 # and publish on CERTI - HLA.                       #
 #####################################################
-
+import sys
 #ROS 
 import rospy
 from sensor_msgs.msg import LaserScan
@@ -114,6 +114,19 @@ getTime = lambda: int(round(time.time() * 1000))
 ### Federation Setup   ###
 ##########################
 
+
+
+mId, mType =  sys.argv[1], sys.argv[2]
+print (mId) 
+print (mType)
+if (mType == "master"):
+	isMaster = True
+else: 
+	isMaster = False
+
+
+
+
 print("Create ambassador")
 rtia = hla.rti.RTIAmbassador()
 mya = MyAmbassador()
@@ -127,13 +140,18 @@ except hla.rti.FederationExecutionAlreadyExists:
 
 #join in a federation
 mya = MyAmbassador()
-rtia.joinFederationExecution("uav-recv", "ExampleFederation", mya)
+if isMaster:
+	rtia.joinFederationExecution("master", "ExampleFederation", mya)
+else: 
+	rtia.joinFederationExecution( "ReadyToRun", "ExampleFederation", mya)
+
 mya.initialize(rtia)
 log("inicialized!\n")
 
 # Announce Synchronization Point (not used by Master)
 if (isMaster==False):
 	label = "ReadyToRun"
+	#label = "1"
 	tag =  bytes ("hi!")
 	rtia.registerFederationSynchronizationPoint(label, tag)
 	log("Synchronization Point Register!")
@@ -147,7 +165,9 @@ x = input ("Waiting for USERS, start aor federations then write a number and pre
 #Archieve Synchronized Point
 while (mya.isAnnounced == False):
         rtia.tick()
+#Executando testes distribuidos
 rtia.synchronizationPointAchieved("ReadyToRun")
+#rtia.synchronizationPointAchieved("1")
 
 
 #tia.synchronizationPointAchieved("ReadyToRun")
@@ -177,7 +197,7 @@ log("MyAmbassador: Time is Regulating and is Constrained")
 log ("\t\t------ STARTING ROS SERVICES -------")
 
 # becabe a node
-rospy.init_node('bridge')
+rospy.init_node('bridge_'+ str (mId))
 
 #Topics that this node will subscribe
 #rospy.Subscriber("robot_0/odom",  Odometry, saveData)
@@ -197,12 +217,12 @@ def hasDataToHLA():
 	return positions.has_key("my") and positions.has_key("leader")
 
 rospy.Subscriber("/robot_0/base_pose_ground_truth",  Odometry, getPos0)
-rospy.Subscriber("/robot_1/base_pose_ground_truth",  Odometry, getPos1)
+rospy.Subscriber("/robot_" + str (mId) +  "/base_pose_ground_truth",  Odometry, getPos1)
 #rospy.Subscriber("/robot_2/base_pose_ground_truth",  Odometry, getPos2)
 
 #rospy.Subscriber("cmd_vel_mux/input/teleop",  Twist, getVel2)
 global p
-p = rospy.Publisher("robot_1/cmd_vel", Twist)
+p = rospy.Publisher("robot_" + str(mId)+ "/cmd_vel", Twist)
 #global r
 #r = rospy.Rate(10) # hz
 
@@ -240,7 +260,7 @@ try:
 		if hasDataToHLA():
 			global positions
 			mapaInicio[str(iteracoes)]=getTime()
-			sendData(1, "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(positions["my"][0])+   ";"  + str(positions["my"][1]) + ";" + str(positions["my"][2])+ ">", "", "", "", "")
+			sendData(int (mId), "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(positions["my"][0])+   ";"  + str(positions["my"][1]) + ";" + str(positions["my"][2])+ ">", "", "", "", "")
 			positions = {}
 			position = None	
 
@@ -251,23 +271,27 @@ try:
 		if mya.hasData==True:
 			_goto = mya.attMap["goto"]
 			_tempo = mya.attMap["time"]
+			_rid = mya.attMap["id"]
 			_iteracoes = mya.attMap["sensor2"]
 			mapaFim[str(_iteracoes)]=float (_tempo)
-			#Walk
-			if (_goto.count("none")<1):
-				#print (str (_goto))
-				_goto = _goto.replace("\\", "")
-				_goto = _goto.replace("\"", "")
-				lin, ang = _goto.split(";")
-				safe_chars = string.digits + '-'
-				ang = ''.join([char if char in safe_chars else '' for char in ang])
-				lin = ''.join([char if char in safe_chars else '' for char in lin])
-				twist = Twist()
-				twist.linear.x = int (lin)
-				twist.angular.z = int (ang)
-				p.publish (twist)
+			#print (_rid)
+			if (_rid.count(str (mId) ) >0):
+				#Walk
+				if (_goto.count("none")<1):
+					print (str (_goto))
+					_goto = _goto.replace("\\", "")
+					_goto = _goto.replace("\"", "")
+					lin, ang = _goto.split(";")
+					safe_chars = string.digits + '-'
+					ang = ''.join([char if char in safe_chars else '' for char in ang])
+					lin = ''.join([char if char in safe_chars else '' for char in lin])
+					twist = Twist()
+					twist.linear.x = int (lin)
+					twist.angular.z = int (ang)
+					p.publish (twist)
 			mya.hasData = False
 			mya.attMap = {}
+			
 
 		#######  Time Management  ########
 		timeHLA = rtia.queryFederateTime() + 1

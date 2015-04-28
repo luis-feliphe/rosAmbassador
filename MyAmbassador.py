@@ -65,7 +65,7 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 	###########################
 	#Calbacks from CERTI - HLA#
 	###########################
-	def reflectAttributeValues(self, object, attributes, tag, order, transport, time, retraction=None):
+	def reflectAttributeValues(self, object, attributes, tag, order, transport, time=None, retraction=None):
 		#self.attMap["time"] = self._rtia.queryFederateTime()
 		self.attMap["time"] = getTime()
 		self.attMap["id"] = attributes[self.idHandle]
