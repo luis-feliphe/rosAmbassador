@@ -12,6 +12,8 @@ class Main :
 		self.mmx=0
 		self.mmy=0
 		self.mmz=0
+		self.pontos= [ [2,2],  [2,8], [13,8], [13,2] ]
+		self.contadorPosicao = 0
 	
 	def whereImGoing(self):
 		lx= float (self.lex)
@@ -20,7 +22,7 @@ class Main :
 		myId= str (self.mId)
 
 		if (myId == "0"): # Im the leader
-			return (0, 0)
+			return pontos[contadorPosicao][0], pontos[contadorPosicao][1]
 		elif (myId == "1"):
 			return lx -1 , ly-1
 		elif (myId == "2"):
@@ -90,39 +92,41 @@ class Main :
 		x, y = self.whereImGoing()
 		mx, my, mz = self.myPosition()
 		if ((math.hypot(x-mx, y-my))< 0.3):
+			self.contadorPosicao = (self.contadorPosicao + 1)%len(self.pontos)
 		        return True
 		return False
 
 
 	def walk (self):
 		x, y = self.whereImGoing()
+		self.log.broadcast(ptolemy.data.StringToken("Im Going to -  X: "+ str(x) + " Y: "+ str(y)))
 		mx, my, mz = self.myPosition()
 		myId= str (self.mId)
-		if (myId == "0"): # Im the leader
-			self.log.broadcast(ptolemy.data.StringToken("Em frente"))
-			return walkon()
-		else:
-		        if (not self.inPosition()):
-		                orient, ang, mz = self.isOriented()
-		                if (orient):
-					self.log.broadcast(ptolemy.data.StringToken("em frente "))
-		                        return self.walkon()
-		                if ((ang - mz) > 0):
-					self.log.broadcast(ptolemy.data.StringToken("antihorario"))
-					if ((ang- mz) < 180):
-						return self.walkantihorario()
-					else: 
-						return self.walkhorario()
-				elif((ang- mz) < 0):
-					if (abs((ang- mz)) < 180):
-						return self.walkhorario()
-					else: 
-						return self.walkantihorario()
-				else:
-					self.log.broadcast(ptolemy.data.StringToken("Deu aguia"))
-		        else:
-				self.log.broadcast(ptolemy.data.StringToken("em posicao "))
-				return 0, 0
+#		if (myId == "0"): # Im the leader
+			#self.log.broadcast(ptolemy.data.StringToken("Em frente"))
+#			return self.walkon()
+#		else:
+	        if (not self.inPosition()):
+	                orient, ang, mz = self.isOriented()
+	                if (orient):
+				self.log.broadcast(ptolemy.data.StringToken("em frente "))
+	                        return self.walkon()
+	                if ((ang - mz) > 0):
+				self.log.broadcast(ptolemy.data.StringToken("antihorario"))
+				if ((ang- mz) < 180):
+					return self.walkantihorario()
+				else: 
+					return self.walkhorario()
+			elif((ang- mz) < 0):
+				if (abs((ang- mz)) < 180):
+					return self.walkhorario()
+				else: 
+					return self.walkantihorario()
+			else:
+				self.log.broadcast(ptolemy.data.StringToken("Deu aguia"))
+	        else:
+			self.log.broadcast(ptolemy.data.StringToken("em posicao "))
+			return 0, 0
 
 
 #		                if ((ang - mz) > 0):# and (ang-mz) < 180):
@@ -143,7 +147,7 @@ class Main :
 		myId = self.mId
 		distance = 2
 		if (myId == "0"): # Im the leader
-			return (0, 0)
+			return self.pontos[self.contadorPosicao][0], self.pontos[self.contadorPosicao][1]
 		elif (myId == "1"):
 			return lx -distance , ly - distance
 		elif (myId == "2"):

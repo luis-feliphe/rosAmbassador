@@ -278,7 +278,6 @@ try:
 			if (_rid.count(str (mId) ) >0):
 				#Walk
 				if (_goto.count("none")<1):
-					print (str (_goto))
 					_goto = _goto.replace("\\", "")
 					_goto = _goto.replace("\"", "")
 					lin, ang = _goto.split(";")
