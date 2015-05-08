@@ -3,10 +3,15 @@ valores = arquivo.readlines()
 arquivo.close()
 listax = []
 listay = []
+somatorioTempo = 0
+contador = 1
 for i in valores:
 	x , y = i.replace("\n", "").replace(".0", "").split(":")
 	listax.append(int(x))
-	listay.append(int(y))
+	somatorioTempo+= int (y)
+	listay.append(somatorioTempo/float(contador))
+	#listay.append(int(y))
+	contador+=1
 
 	
 import numpy 

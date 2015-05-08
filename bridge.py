@@ -143,6 +143,8 @@ mya = MyAmbassador()
 if isMaster:
 	rtia.joinFederationExecution("master", "ExampleFederation", mya)
 else: 
+	#Esse aqui vai com nome diferente no slave ... o 2 ou outra coisa assim como est+a configurado
+	#rtia.joinFederationExecution( str(mId)+ str(mId), "ExampleFederation", mya)
 	rtia.joinFederationExecution( "ReadyToRun", "ExampleFederation", mya)
 
 mya.initialize(rtia)
@@ -150,8 +152,9 @@ log("inicialized!\n")
 
 # Announce Synchronization Point (not used by Master)
 if (isMaster==False):
+	#No slave eh pra ser igual ao do la de cima portanto diferente de readyToRun
 	label = "ReadyToRun"
-	#label = "1"
+	#label = str(mId)+ str (mId)
 	tag =  bytes ("hi!")
 	rtia.registerFederationSynchronizationPoint(label, tag)
 	log("Synchronization Point Register!")
@@ -163,16 +166,20 @@ if (isMaster==False):
 x = input ("Waiting for USERS, start aor federations then write a number and press ok.\n")
 
 #Archieve Synchronized Point
+
 while (mya.isAnnounced == False):
         rtia.tick()
+
+log("Calling Archieve Synchronized Point: Ready TO Run, waiting for federation\n")
 #Executando testes distribuidos
 rtia.synchronizationPointAchieved("ReadyToRun")
-#rtia.synchronizationPointAchieved("1")
+#rtia.synchronizationPointAchieved("22")
 
 
 #tia.synchronizationPointAchieved("ReadyToRun")
 
 while (mya.isReady == False):
+	log ("Is Ready To Run == False")
 	rtia.tick()
 log ("MyAmbassador : Is Ready to run ")
 
@@ -224,7 +231,7 @@ rospy.Subscriber("/robot_" + str (mId) +  "/base_pose_ground_truth",  Odometry, 
 global p
 p = rospy.Publisher("robot_" + str(mId)+ "/cmd_vel", Twist)
 #global r
-#r = rospy.Rate(10) # hz
+r = rospy.Rate(100) # hz
 
 parada = 0
 cont = 0
@@ -247,10 +254,11 @@ iteracoes = 0.0
 mapaInicio={}
 mapaFim= {}
 
-
+newConter = 0
 
 
 tempoInicial = getTime()
+
 try:
 	while not rospy.is_shutdown():
 		iteracoes+= 1
@@ -258,9 +266,12 @@ try:
 		### Bridge Sending Data to HLA  ###
 		##################################
 		if hasDataToHLA():
+			newConter+= 1
 			global positions
-			mapaInicio[str(iteracoes)]=getTime()
-			sendData(int (mId), "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(positions["my"][0])+   ";"  + str(positions["my"][1]) + ";" + str(positions["my"][2])+ ">", "", "", "", "")
+			#mapaInicio[str(iteracoes)]=getTime()
+			mapaInicio[str(newConter)]=getTime()
+			sendData(int (mId), "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(positions["my"][0])+   ";"  + str(positions["my"][1]) + ";" + str(positions["my"][2])+ ">", "", "", "", str ( newConter ))
+			#sendData(int (mId), "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(positions["my"][0])+   ";"  + str(positions["my"][1]) + ";" + str(positions["my"][2])+ ">", "", "", "", "")
 			positions = {}
 			position = None	
 
@@ -272,8 +283,10 @@ try:
 			_goto = mya.attMap["goto"]
 			_tempo = mya.attMap["time"]
 			_rid = mya.attMap["id"]
-			_iteracoes = mya.attMap["sensor2"]
+			_iteracoes = mya.attMap["activate"]
+			_iteracoes= _iteracoes.replace("\\", "").replace("\"", "").replace(";", "").replace(" ", "").replace("\x00", "")
 			mapaFim[str(_iteracoes)]=float (_tempo)
+			print ("o que chegou - " + str (_iteracoes) + " - " + str (_tempo)) 
 			#print (_rid)
 			if (_rid.count(str (mId) ) >0):
 				#Walk
@@ -281,12 +294,14 @@ try:
 					_goto = _goto.replace("\\", "")
 					_goto = _goto.replace("\"", "")
 					lin, ang = _goto.split(";")
-					safe_chars = string.digits + '-'
+					#print ("Linear: " + str (lin) + " angular: "+ str (ang)+ "(Before)" )
+					safe_chars = string.digits + '-.'
 					ang = ''.join([char if char in safe_chars else '' for char in ang])
 					lin = ''.join([char if char in safe_chars else '' for char in lin])
 					twist = Twist()
-					twist.linear.x = int (lin)
-					twist.angular.z = int (ang)
+					#print ("Linear: " + str (float (lin)) + " angular: "+ str (float (ang)) )
+					twist.linear.x = float (lin)
+					twist.angular.z = float (ang)
 					p.publish (twist)
 			mya.hasData = False
 			mya.attMap = {}
@@ -301,7 +316,7 @@ try:
 		mya.advanceTime = False
 		#################################
 	#		_time = int(round(time.time()*1000))
-#		r.sleep()
+		#r.sleep()
 except Exception :
 	raise	
 	print ("finalizando simulacao")
@@ -319,6 +334,9 @@ finally:
 	#print (mapaInicio)
 	#print "mapa fim"
 	#print (mapaFim)
+	print mapaInicio
+	print "\n----------------------------------------------------------------------------\n"
+	print mapaFim
 	for i in mapaInicio.iterkeys():
 		if (mapaFim.has_key(i)):
 			valuetmp = mapaFim[i]-mapaInicio[i]

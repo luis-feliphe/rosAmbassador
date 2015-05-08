@@ -79,7 +79,6 @@ class MyAmbassador(hla.rti.FederateAmbassador):
                 self.attMap["goto"] = attributes[self.gotoHandle]
                 self.attMap["rotate"]= attributes[self.rotateHandle]
                 self.attMap["activate"]= attributes[self.activateHandle]
-
 		self.hasData= True
 
 	def log (self, valor):
