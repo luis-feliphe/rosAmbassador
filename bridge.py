@@ -231,7 +231,7 @@ rospy.Subscriber("/robot_" + str (mId) +  "/base_pose_ground_truth",  Odometry, 
 global p
 p = rospy.Publisher("robot_" + str(mId)+ "/cmd_vel", Twist)
 #global r
-r = rospy.Rate(100) # hz
+r = rospy.Rate(10) # hz
 
 parada = 0
 cont = 0
@@ -244,6 +244,19 @@ walk = False
 #befTime = None
 aux = 0
 media = []
+
+global IteracoesROS
+IteracoesROS = 1
+
+
+from threading import Thread
+def rosLoop (oi):
+	while not rospy.is_shutdown():
+		global IteracoesROS
+		r.sleep()
+		IteracoesROS += 1
+
+
 ################
 ## Main loop  ##
 ################
@@ -257,7 +270,14 @@ mapaFim= {}
 newConter = 0
 
 
+
 tempoInicial = getTime()
+
+#ThreadIsRuning= False
+#		if not ThreadIsRuning:
+th= Thread(target= rosLoop, args= ("", ))
+th.start()
+#ThreadIsRuning = True
 
 try:
 	while not rospy.is_shutdown():
@@ -279,6 +299,10 @@ try:
 		######################################
 		### Bridge handling data from  HLA  ##
 		######################################
+#		if not ThreadIsRuning:
+#			th= Thread(target= listeningRTI, args= ("", ))
+#			th.start()
+#			ThreadIsRuning = True
 		if mya.hasData==True:
 			_goto = mya.attMap["goto"]
 			_tempo = mya.attMap["time"]
@@ -290,7 +314,7 @@ try:
 			#print (_rid)
 			if (_rid.count(str (mId) ) >0):
 				#Walk
-				if (_goto.count("none")<1):
+				if (_goto.count("none")<1 and _goto.count(";")== 1):
 					_goto = _goto.replace("\\", "")
 					_goto = _goto.replace("\"", "")
 					lin, ang = _goto.split(";")
@@ -323,10 +347,13 @@ except Exception :
 finally:
 	tempoFinal = getTime()
 	total = tempoFinal - tempoInicial
-	print "--------- Ponte -------------"
+	print "--------- LOOP HLA -------------"
 	print "tempo de simulacao = "+ str(total)
 	print "Interacoes = "+ str(iteracoes)
 	print "total por loop " + str (total/iteracoes)
+	print "--------- LOOP ROS -------------"
+	print "Interacoes  = "+ str(IteracoesROS)
+	print "total por loop " + str (total/IteracoesROS)
 	print "----- tempo de mensagens--------"
 	tempo = []
 	grafico = {}
@@ -334,9 +361,9 @@ finally:
 	#print (mapaInicio)
 	#print "mapa fim"
 	#print (mapaFim)
-	print mapaInicio
-	print "\n----------------------------------------------------------------------------\n"
-	print mapaFim
+#	print mapaInicio
+#	print "\n----------------------------------------------------------------------------\n"
+#	print mapaFim
 	for i in mapaInicio.iterkeys():
 		if (mapaFim.has_key(i)):
 			valuetmp = mapaFim[i]-mapaInicio[i]

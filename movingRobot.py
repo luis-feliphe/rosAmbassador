@@ -92,7 +92,7 @@ try:
 				# Publish the message
 				p.publish(twist)
 		# TODO check if this sleep is necessary
-		#r.sleep()
+		r.sleep()
 except:
 	pass
 finally:
