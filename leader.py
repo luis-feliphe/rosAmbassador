@@ -27,6 +27,8 @@ getTime = lambda: int(round(time.time() * 1000))
 
 
 
+
+
 def log (valor):
 	print ("\033[36m" + valor + "\033[0;0m")
 
@@ -34,20 +36,35 @@ def saveScan(data):
         global dataToSend
         dataToSend = data
 
+global entrada
+global saida
+entrada = []
+saida = []
+
+
+global listaPosicoes
+listaPosicoes = []
+
 global dataToSend
 dataToSend=None
 global posicoes
 posicoes= {}
+global contpos
+contpos = 0
+global ultimavelocidade
+ultimavelocidade = 0
 
 
 def degrees(value):
-	return  math.degrees(value)#((value* 180.0)/math.pi)
+	return (value*180)/math.pi#math.degrees(value)#((value* 180.0)/math.pi)
 
 def whereImGoing():
 	global myId
 	global posicoes
 	if (myId == "0"): # Im the leader
-		return (0, 0)
+		global contpos
+		#return [(10,10),(10,-10) ,(-10,-10) ,(-10,10)][contpos]
+		return 10, 10
 	elif (myId == "1"):
 		if (posicoes.has_key(0)):
 			x, y, z = getxy (posicoes[0])
@@ -59,6 +76,28 @@ def whereImGoing():
 	return 0, 0
 
 
+def calculaVelocidadeLinear(distanciaAlvo):
+	global ultimavelocidade
+	lastVel = ultimavelocidade
+	#Velocidade linear maxima a ser enviada pelo robo 
+	MAX_VELOCIDADE_LINEAR= 1
+	ACELERACAO_LINEAR = 0.05
+	velocidadeLinear = 0
+	#acelerando ou continua
+	if (distanciaAlvo>=4):
+		velocidadeLinear = lastVel+ ACELERACAO_LINEAR
+		if velocidadeLinear > MAX_VELOCIDADE_LINEAR:
+			velocidadeLinear= MAX_VELOCIDADE_LINEAR
+		return float(velocidadeLinear)
+	#desacelerando
+	else:
+		velocidadeLinear = velocidadeLinear - ACELERACAO_LINEAR
+		if velocidadeLinear < ACELERACAO_LINEAR:
+			velocidadeLinear = ACELERACAO_LINEAR
+		return float(velocidadeLinear)
+
+def stop():
+	return Twist()
 def walkon():
 	t = Twist()
 	t.linear.x = 1
@@ -75,6 +114,38 @@ def walkantihorario():
 	t.angular.z = 0.5
 	#t.linear.x = 0.2
 	return t
+
+
+def walkhorarioon(vel):
+	t = Twist()
+	t.angular.z = -0.5
+#t.linear.x = 0.3# 0.3
+	t.linear.x = vel# 0.3
+	return t
+
+def walkantihorarioon(vel):
+	t = Twist()
+	t.angular.z = 0.5
+#	t.linear.x = 0.3
+	t.linear.x = vel# 0.3
+	return t
+
+
+def walkonhorario():
+	t = Twist()
+	t.angular.z = -0.1
+	t.linear.x = 1
+	return t
+
+def walkonantihorario():
+	t = Twist()
+	t.angular.z = 0.1
+	t.linear.x = 1
+	return t
+
+
+
+
 def walkback():
 	t = Twist()
 	t.linear.x = -1
@@ -97,25 +168,21 @@ import math
 def isOriented():
 	x, y = whereImGoing()
 	mx, my, mz = myPosition()
-	#print str (mx) + " " + str(my)
 	if (not (mx == 0 and my == 0)):
 		#calcula a distancia entre meu ponto e o ponto que quero ir
 		hip = math.hypot (x - mx, y - my) 
-		#cat = max([x, mx]) - min ([x, mx])
 		#calcula a distancia dos dois catetos
 		tmp1 = math.hypot( x -mx, 0 )
 		tmp2 = math.hypot( 0, y -my )
 		#seleciona o maior cateto
 		cat = max ([tmp1, tmp2])
 		#calcula o angulo que preciso estar para
-		anguloEsperado = math.degrees(math.cos(float(cat)/hip))
+		anguloEsperado = degrees(math.cos(float(cat)/hip))
 		#print "deslocamento " + str (anguloEsperado) + " cateto " + str (cat) + " hip " + str (hip) + "meu x=" + str (mx) + " meu y=" + str (my)  + " X= " + str (x) + " Y= " + str (y)
 		deltax = x - mx
 		deltay = y - my
 		deltax = abs(deltax)
 		deltay = abs(deltay)
-		#print "delta y = " + str (deltay)
-		#print "delta x = " + str (deltax)
 		#print anguloEsperado
 		if (deltax<0.19) and y > my:
 			anguloEsperado = 90
@@ -138,11 +205,11 @@ def isOriented():
 		a = max ([anguloEsperado, mz])
 		b = min ([anguloEsperado , mz])
 		#print "values " + str (anguloEsperado) + " - " + str (mz) + " = " + str (a - b)
-		limin = 3
+		limin =3 
 		if ((a - b) < limin or ((a-b)>(360-limin))):
-			return True , anguloEsperado, mz
-		return False, anguloEsperado, mz
-	return False, 1000, 800
+			return True , anguloEsperado, mz, hip
+		return False, anguloEsperado, mz, hip
+	return False, 1000, 800, 1000
 
 
 
@@ -162,42 +229,72 @@ def inPosition():
 	x, y = whereImGoing()
 	mx, my, mz = myPosition()
 	if ((math.hypot(x-mx, y-my))< 0.3):
+		global contpos
+		contpos = (contpos + 1)%4
+		global ultimavelocidade
+		ultimavelocidade = 0
 		return True
 	return False
 
 def walk ():
 	x, y = whereImGoing()
 	mx, my, mz = myPosition()
-	myPosition()
+	global entrada
+	entrada.append(str (x + 2) +" "+ str(y+ 2) + " "+ str(mx)+" "+ str(my) +" "+ str(mz))
+	#myPosition()
 	global myId
-	if (myId == "0"): # Im the leader
-		return walkon()
-	else:
-		if (not inPosition()):
-			orient, ang, mz = isOriented()
-			if (orient):
-				#print "is oriented"
+	if (not inPosition()):
+		orient, ang, mz, hip = isOriented()
+		#Minimamente orientado
+		if (orient):
+			#Muito orientado 
+			if (int (ang) == int(mz)):
 				return walkon()
-
-			#a = max([ang, mz])
-			#b = min([ang, mz])
-			#total = ang - mz
-			#if (total>180):
-			if ((ang - mz) > 0 and (ang-mz) < 180):
-				#print "valor que eu quero ir " + str (ang) + " eh maior que o meu " + str (mz)
-				#print " anti horario " + str (ang) + " - "  + str (mz) + " = " + str (ang-mz)
-				return walkantihorario()
+			#orientado mas necessita de poucos ajustes
 			else:
-				#print "valor que eu quero ir " + str (ang) + " eh menor que o meu " + str (mz)
-				#print "horario "
-				return walkhorario()
+				if ((ang - mz) >= 0 ):
+					if ((ang-mz)<180):
+						return walkonantihorario()
+					else:
+						return walkonhorario()
+				else:#if ((ang-mz)<0):
+					if (abs(ang-mz)<180):
+						return walkonhorario()
+					else:
+						return walkonantihorario()
+		#nao esta orientado com distancia curta
+		if (hip < 2.3):
+			if ((ang - mz) >= 0 ):
+				if ((ang-mz)<180):
+					return walkantihorario()
+				else:
+					return walkhorario()
+			elif ((ang-mz)<0):
+				if (abs(ang-mz)<180):
+					return walkhorario()
+				else:
+					return walkantihorario()
+		#Nao esta orientado com distancia maior
 		else:
-			return Twist()
-			#print "stop"
-
+			velocidade = calculaVelocidadeLinear(hip)
+			if ((ang - mz) >= 0 ):
+				if ((ang-mz)<180):
+					return walkantihorarioon(velocidade)
+				else:
+					return walkhorarioon(velocidade)
+			elif ((ang-mz)<0):
+				if (abs(ang-mz)<180):
+					return walkhorarioon(velocidade)
+				else:
+					return walkantihorarioon(velocidade)
+	return stop()
 
 def getpos(robotId, odom):
 	global posicoes
+#	if str(myId) == str(robotId):
+#		global listaPosicoes
+#		x, y , z = getxy(odom)
+#		listaPosicoes.append(str (round(x,2)) + ":" + str (round(y, 2)))
 	posicoes[robotId]= odom
 
 def getPos0(w):
@@ -210,7 +307,7 @@ def getDegreesFromOdom(w):
 	current_angle = euler_angles[2]
 	if current_angle < 0:
 		current_angle = 2 * math.pi + current_angle
-	return math.degrees(current_angle)
+	return degrees(current_angle)
 		
 def getPos1(odom):
 	getpos(1, odom)
@@ -221,23 +318,28 @@ def getPos2(odom):
 global last
 last = 0
 def getxy (odom):
-	#global last
-	#teste = [odom.pose.pose.orientation.x, odom.pose.pose.orientation.y, odom.pose.pose.orientation.z, odom.pose.pose.orientation.w]
-	#euler = tf.transformations.euler_from_quaternion(teste)
-	#yall = euler[2]
-	#print ("Geting orientation")
-	#print odom.pose.pose.orientation.z
-	#print odom.pose.pose.orientation.w
-	#if (not (yall == last)):
-	#	temp = (yall * 180)/ 3.14
-	#print ("\n")
-	#last = yall
-	#print str (temp) + " "  + str (math.degrees(yall))
 	return odom.pose.pose.position.x, odom.pose.pose.position.y, getDegreesFromOdom (odom)#degrees(yall)
 
 #############
 # ROS SETUP #
 #############
+
+
+
+
+import socket
+print "Starting services, wainting signal from master"
+HOST = "192.168.1.6"    # The remote host
+PORT = 50000              # The same port as used by the server
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((HOST, PORT))
+s.sendall('Hello, world')
+data = s.recv(1024)
+s.close()
+print "starting Application", repr(data)
+
+
+
 
 #Became a node, using the arg to decide what the number of robot
 rospy.init_node('robot_'+str(sys.argv[1]))
@@ -252,7 +354,7 @@ rospy.Subscriber("/robot_0/base_pose_ground_truth",  Odometry, getPos0)
 rospy.Subscriber("/robot_1/base_pose_ground_truth",  Odometry, getPos1)
 rospy.Subscriber("/robot_2/base_pose_ground_truth",  Odometry, getPos2)
 
-r = rospy.Rate(10) # hz
+r = rospy.Rate(50) # 5hz
 
 
 ######################
@@ -276,8 +378,12 @@ iteracoes = 0.0
 tempoInicial = getTime()
 try:
 	while not rospy.is_shutdown():
+		global ultimavelocidade
 		iteracoes += 1
 		t = walk()
+		ultimavelocidade = t.linear.x
+		global saida
+		saida.append(": "+ str(t.angular.z) + " " + str(t.linear.x))
 		p.publish(t)
 		r.sleep()
 except Exception :
@@ -291,5 +397,12 @@ finally:
 	print "Interacoes = "+ str(iteracoes)
 	print "total por loop " + str (total/iteracoes)
 	print "----- tempo de mensagens--------"
-
+	global myId
+	arquivo = open ("posicoesRobo_"+ str (myId) + ".txt" , "w")
+	global entrada
+	global saida
+	for i in range (0, len (entrada)):
+		if (i < len (saida)):
+			arquivo.write(entrada[i]+ " " + saida[i]+ "\n")
+	arquivo.close()
 #
