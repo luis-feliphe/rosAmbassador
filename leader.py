@@ -44,7 +44,8 @@ saida = []
 
 global listaPosicoes
 listaPosicoes = []
-
+global VEL_MAX #maxima velocidade possivel 
+VEL_MAX = 0.8
 global dataToSend
 dataToSend=None
 global posicoes
@@ -80,7 +81,7 @@ def calculaVelocidadeLinear(distanciaAlvo):
 	global ultimavelocidade
 	lastVel = ultimavelocidade
 	#Velocidade linear maxima a ser enviada pelo robo 
-	MAX_VELOCIDADE_LINEAR= 1
+	MAX_VELOCIDADE_LINEAR= 0.5
 	ACELERACAO_LINEAR = 0.05
 	velocidadeLinear = 0
 	#acelerando ou continua
@@ -99,48 +100,55 @@ def calculaVelocidadeLinear(distanciaAlvo):
 def stop():
 	return Twist()
 def walkon():
+	global VEL_MAX
 	t = Twist()
-	t.linear.x = 1
+	t.linear.x = VEL_MAX #modificado1
 	return t
 
 def walkhorario():
+	global VEL_MAX
 	t = Twist()
-	t.angular.z = -0.5
+	t.angular.z =-VEL_MAX #modificado -0.5
 	#t.linear.x = 0.2
 	return t
 
 def walkantihorario():
+	global VEL_MAX
 	t = Twist()
-	t.angular.z = 0.5
+	t.angular.z = VEL_MAX #modificado 0.5
 	#t.linear.x = 0.2
 	return t
 
 
 def walkhorarioon(vel):
+	global VEL_MAX
 	t = Twist()
-	t.angular.z = -0.5
+	t.angular.z = -VEL_MAX #modificado -0.5
 #t.linear.x = 0.3# 0.3
-	t.linear.x = vel# 0.3
+	t.linear.x = 0.3#vel# 0.3
 	return t
 
 def walkantihorarioon(vel):
+	global VEL_MAX
 	t = Twist()
-	t.angular.z = 0.5
-#	t.linear.x = 0.3
-	t.linear.x = vel# 0.3
+	t.angular.z =VEL_MAX # modificado 0.5
+	t.linear.x = 0.3
+#	t.linear.x = vel# 0.3
 	return t
 
 
 def walkonhorario():
+	global VEL_MAX
 	t = Twist()
-	t.angular.z = -0.1
-	t.linear.x = 1
+	t.angular.z = -0.3# modificando 1
+	t.linear.x = VEL_MAX #1 - modificado
 	return t
 
 def walkonantihorario():
+	global VEL_MAX
 	t = Twist()
-	t.angular.z = 0.1
-	t.linear.x = 1
+	t.angular.z = 0.3 #modificando 1
+	t.linear.x = VEL_MAX #modificado 1
 	return t
 
 
@@ -263,7 +271,7 @@ def walk ():
 					else:
 						return walkonantihorario()
 		#nao esta orientado com distancia curta
-		if (hip < 2.3):
+		if (hip < 1.5):
 			if ((ang - mz) >= 0 ):
 				if ((ang-mz)<180):
 					return walkantihorario()
@@ -318,7 +326,7 @@ def getPos2(odom):
 global last
 last = 0
 def getxy (odom):
-	return odom.pose.pose.position.x, odom.pose.pose.position.y, getDegreesFromOdom (odom)#degrees(yall)
+	return round (odom.pose.pose.position.x), round ( odom.pose.pose.position.y), round (getDegreesFromOdom (odom))#degrees(yall)
 
 #############
 # ROS SETUP #
@@ -352,9 +360,9 @@ p = rospy.Publisher(x, Twist)
 #subscribing a position of the robot (Not Necessary)
 rospy.Subscriber("/robot_0/base_pose_ground_truth",  Odometry, getPos0)
 rospy.Subscriber("/robot_1/base_pose_ground_truth",  Odometry, getPos1)
-rospy.Subscriber("/robot_2/base_pose_ground_truth",  Odometry, getPos2)
+#rospy.Subscriber("/robot_2/base_pose_ground_truth",  Odometry, getPos2)
 
-r = rospy.Rate(50) # 5hz
+r = rospy.Rate(6) # 5hz
 
 
 ######################

@@ -27,12 +27,21 @@ import math
 
 isMaster=True
 
+global entrada
+global saida
+entrada = {}
+saida={}
+
+
 global mya
 global on 
 on = True
 global cont
 cont = 0
-
+global contadorentrada
+contadorentrada = 0
+global contadorsaida
+contadorsaida = 0
 
 
 def getDegreesFromOdom(w):
@@ -75,30 +84,8 @@ def sendData(idrobot ,battery="", temperature="", sensor1="", sensor2="", sensor
 global dataToSend
 dataToSend=None
 def saveScan(data):
-#	if mya.attMap.has_key("sensor2"):
-#		ft = mya.attMap["sensor2"]
-#		if (ft.count("none")==0):
-#			mapaFim[str(iteracoes)]=float(getTime())
 	global dataToSend
 	dataToSend = data
-#	else:
-#		print "Ocorreu um erro, o valor sensor2 nao veio"
-#		print (mya.attMap)
-#		print "-----------------------------------------\n"
-
-
-###############################
-## Some call backs not used  ##
-###############################
-
-#def getPos(odom_data, numberID):
-#	sendData(str(numberID, "", "", "", "", "","<" + str(odom_data.pose.pose.position.x) + ";" + str (odom_data.pose.pose.position.y) + "> " , "", "", "", "")
-
-#def getVel2 (Twist):
-#	sendData(1, "", "", "", "", "", "<" + str(twist.linearx) + ";" + str (twist.linear.y) + "> "  , "", "", "", "")
-
-#def getPos1(odom_data):
-#	getPos (odom_data,1)
        
 def log (valor):
 	print ("\033[36m" + valor + "\033[0;0m")
@@ -119,8 +106,12 @@ getTime = lambda: int(round(time.time() * 1000))
 mId, mType =  sys.argv[1], sys.argv[2]
 print (mId) 
 print (mType)
+isLast= False
 if (mType == "master"):
 	isMaster = True
+elif(mType== "last"):
+	isMaster= False
+	isLast= True
 else: 
 	isMaster = False
 
@@ -142,10 +133,11 @@ except hla.rti.FederationExecutionAlreadyExists:
 mya = MyAmbassador()
 if isMaster:
 	rtia.joinFederationExecution("master", "ExampleFederation", mya)
-else: 
-	#Esse aqui vai com nome diferente no slave ... o 2 ou outra coisa assim como est+a configurado
-	#rtia.joinFederationExecution( str(mId)+ str(mId), "ExampleFederation", mya)
-	rtia.joinFederationExecution( "ReadyToRun", "ExampleFederation", mya)
+else:
+	if (isLast):
+		rtia.joinFederationExecution( "ReadyToRun", "ExampleFederation", mya)
+	else:
+		rtia.joinFederationExecution( str(mId)+"ReadyToRun", "ExampleFederation", mya)
 
 mya.initialize(rtia)
 log("inicialized!\n")
@@ -153,8 +145,10 @@ log("inicialized!\n")
 # Announce Synchronization Point (not used by Master)
 if (isMaster==False):
 	#No slave eh pra ser igual ao do la de cima portanto diferente de readyToRun
-	label = "ReadyToRun"
-	#label = str(mId)+ str (mId)
+	if (isLast):
+		label = "ReadyToRun"
+	else:
+		label = str(mId)+ "ReadyToRun"
 	tag =  bytes ("hi!")
 	rtia.registerFederationSynchronizationPoint(label, tag)
 	log("Synchronization Point Register!")
@@ -179,9 +173,7 @@ rtia.synchronizationPointAchieved("ReadyToRun")
 #tia.synchronizationPointAchieved("ReadyToRun")
 
 while (mya.isReady == False):
-	log ("Is Ready To Run == False")
 	rtia.tick()
-log ("MyAmbassador : Is Ready to run ")
 
 # Enable Time Policy
 currentTime =rtia.queryFederateTime()
@@ -201,6 +193,9 @@ log("MyAmbassador: Time is Regulating and is Constrained")
 #  Setup of ROS #
 #################
 
+global listaPosicoes
+listaPosicoes= []
+
 log ("\t\t------ STARTING ROS SERVICES -------")
 
 # becabe a node
@@ -214,11 +209,12 @@ global positions
 positions = {}
 def getPos0(odom):
 	global positions
-	positions["leader"] = [odom.pose.pose.position.x, odom.pose.pose.position.y, odom.pose.pose.orientation.w]
+	positions["leader"] = [round (odom.pose.pose.position.x), round (odom.pose.pose.position.y), round (odom.pose.pose.orientation.w)]
 def getPos1(odom):
 	global positions
-	positions["my"] = [odom.pose.pose.position.x, odom.pose.pose.position.y, getDegreesFromOdom(odom)]
-
+	global listaPosicoes
+	positions["my"] = [round (odom.pose.pose.position.x), round (odom.pose.pose.position.y), round (getDegreesFromOdom(odom))]
+	listaPosicoes.append(str(round(odom.pose.pose.position.x, 2)) + ":"+ str (round(odom.pose.pose.position.y, 2)))
 def hasDataToHLA():
 	global positions
 	return positions.has_key("my") and positions.has_key("leader")
@@ -231,22 +227,42 @@ rospy.Subscriber("/robot_" + str (mId) +  "/base_pose_ground_truth",  Odometry, 
 global p
 p = rospy.Publisher("robot_" + str(mId)+ "/cmd_vel", Twist)
 #global r
-r = rospy.Rate(10) # hz
+r = rospy.Rate(6) # hz
 
 parada = 0
 cont = 0
 on = True
 walk = False
 
-####### Temporary mechanism to verify response time #######
-#sended = False
-#received = False
-#befTime = None
 aux = 0
 media = []
 
 global IteracoesROS
 IteracoesROS = 1
+
+
+
+
+
+
+
+################
+## Main loop  ##
+################
+iteracoes = 0.0
+### Map para pegar o tempo 
+
+global mapaInicio
+mapaInicio={}
+global mapaFim
+mapaFim= {}
+
+
+global newConter
+newConter = 0
+
+
+
 
 
 from threading import Thread
@@ -257,43 +273,68 @@ def rosLoop (oi):
 		IteracoesROS += 1
 
 
-################
-## Main loop  ##
-################
-iteracoes = 0.0
-### Map para pegar o tempo 
 
 
-mapaInicio={}
-mapaFim= {}
-
-newConter = 0
 
 
+
+
+if isMaster:
+	print "Im waiting the client request"
+	import socket
+	HOST = ""
+	PORT = 50000
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	s.bind((HOST, PORT))
+	s.listen(1)
+	conn, addr = s.accept()
+	print "Starting The ROBOT"
+	while 1:
+		data = conn.recv(1024)
+		if not data:break
+		conn.sendall(data)
+	conn.close()
+	
 
 tempoInicial = getTime()
-
 #ThreadIsRuning= False
 #		if not ThreadIsRuning:
 th= Thread(target= rosLoop, args= ("", ))
 th.start()
 #ThreadIsRuning = True
 
+
+
+
 try:
 	while not rospy.is_shutdown():
 		iteracoes+= 1
+
+
 		###################################
 		### Bridge Sending Data to HLA  ###
 		##################################
 		if hasDataToHLA():
+			global newConter
 			newConter+= 1
 			global positions
 			#mapaInicio[str(iteracoes)]=getTime()
+			global mapaInicio
 			mapaInicio[str(newConter)]=getTime()
+			#Adicionando ao log: leaderX, leaderY, leaderZ, posX, posY, posZ 
+			global entrada
+			global contadorentrada
+			global mId
+			if (str (mId) == "3"):
+				entrada[contadorentrada]=str(positions["leader"][0])+ " " + str( (positions["leader"][1]))+ " " + str(positions["my"][0])+   " "  + str(positions["my"][1] + 5) + " " + str(positions["my"][2]) 
+				contadorentrada+= 1
 			sendData(int (mId), "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(positions["my"][0])+   ";"  + str(positions["my"][1]) + ";" + str(positions["my"][2])+ ">", "", "", "", str ( newConter ))
 			#sendData(int (mId), "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(positions["my"][0])+   ";"  + str(positions["my"][1]) + ";" + str(positions["my"][2])+ ">", "", "", "", "")
 			positions = {}
 			position = None	
+
+
+
 
 
 		######################################
@@ -309,12 +350,15 @@ try:
 			_rid = mya.attMap["id"]
 			_iteracoes = mya.attMap["activate"]
 			_iteracoes= _iteracoes.replace("\\", "").replace("\"", "").replace(";", "").replace(" ", "").replace("\x00", "")
-			mapaFim[str(_iteracoes)]=float (_tempo)
-			print ("o que chegou - " + str (_iteracoes) + " - " + str (_tempo)) 
+
+			#print ("o que chegou - " + str (_iteracoes) + " - " + str (_tempo)) 
 			#print (_rid)
 			if (_rid.count(str (mId) ) >0):
 				#Walk
 				if (_goto.count("none")<1 and _goto.count(";")== 1):
+					global mapaFim
+					mapaFim[str(_iteracoes)]=float (_tempo)
+
 					_goto = _goto.replace("\\", "")
 					_goto = _goto.replace("\"", "")
 					lin, ang = _goto.split(";")
@@ -324,8 +368,12 @@ try:
 					lin = ''.join([char if char in safe_chars else '' for char in lin])
 					twist = Twist()
 					#print ("Linear: " + str (float (lin)) + " angular: "+ str (float (ang)) )
-					twist.linear.x = float (lin)
-					twist.angular.z = float (ang)
+					global saida
+					global contadorsaida
+					saida[contadorsaida] = str (ang) + " " + str (lin)
+					contadorsaida += 1
+					twist.linear.x = round (float (lin), 2)
+					twist.angular.z = round (float (ang), 2)
 					p.publish (twist)
 			mya.hasData = False
 			mya.attMap = {}
@@ -342,8 +390,9 @@ try:
 	#		_time = int(round(time.time()*1000))
 		#r.sleep()
 except Exception :
-	raise	
 	print ("finalizando simulacao")
+	raise	
+
 finally:
 	tempoFinal = getTime()
 	total = tempoFinal - tempoInicial
@@ -353,17 +402,13 @@ finally:
 	print "total por loop " + str (total/iteracoes)
 	print "--------- LOOP ROS -------------"
 	print "Interacoes  = "+ str(IteracoesROS)
-	print "total por loop " + str (total/IteracoesROS)
-	print "----- tempo de mensagens--------"
+	print "total por loop " + str (total/float(IteracoesROS))
+	print "--------------------------------"
 	tempo = []
 	grafico = {}
 	maxvalue = 0
-	#print (mapaInicio)
-	#print "mapa fim"
-	#print (mapaFim)
-#	print mapaInicio
-#	print "\n----------------------------------------------------------------------------\n"
-#	print mapaFim
+	global mapaInicio
+	global mapaFim
 	for i in mapaInicio.iterkeys():
 		if (mapaFim.has_key(i)):
 			valuetmp = mapaFim[i]-mapaInicio[i]
@@ -378,22 +423,21 @@ finally:
 			eixoindice.append(int(i))
 			eixovalor.append(int(grafico[float (i)]))
 
-	arquivo = open ("resultadoSimulacao.txt", "w")
+	arquivo = open ("Simulacao_Robo_"+str (mId) + ".txt", "w")
 	for i in range (0, len (eixoindice)):
 		arquivo.write(str (eixoindice[i]) +":"+str(eixovalor[i])+"\n")
 	arquivo.close()
-#	import numpy 
-#	dp = numpy.array(tempo)
-#	print ("desvio padrao= "+ str(numpy.std(dp)))
-#	print ("media = "+ str(numpy.mean(dp)))
-#	import pylab
-#	pylab.plot(eixoindice, eixovalor)
-#	pylab.xlabel('tempo ms')
-#	pylab.ylabel('iteracao')
-#	pylab.title('Tempo de resposta ao longo das Iteracoes') 
-#	pylab.show()
-#	print float(sum(tempo)) / len (tempo)
-	
+
+	####Log system#####
+	global entrada
+	global saida
+	log = open ("logsimulacao"+ str (mId)+".txt", "w")
+	for i in entrada.iterkeys():
+		if (saida.has_key(i)):
+			log.write(entrada[i] + " : " + saida[i]+ "\n")
+	log.close()
+			
+
 	
 mya.terminate()
 rtia.resignFederationExecution(hla.rti.ResignAction.DeleteObjectsAndReleaseAttributes)
