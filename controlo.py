@@ -1,6 +1,8 @@
 import ptolemy.data
 import math
 
+global ultimaVelocidade
+ultimaVelocidade = 0
 
 
 class Main :
@@ -12,7 +14,7 @@ class Main :
 		self.mmx=0
 		self.mmy=0
 		self.mmz=0
-		self.pontos= [ [2,2],  [2,8], [13,8], [13,2] ]
+		self.pontos= [ [10,10],  [10,-10], [-10,-10], [-10,10] ]
 		self.contadorPosicao = 0
 	
 	def whereImGoing(self):
@@ -20,7 +22,6 @@ class Main :
 		ly= float (self.ley)
 		lz= float (self.lez)
 		myId= str (self.mId)
-
 		if (myId == "0"): # Im the leader
 			return pontos[contadorPosicao][0], pontos[contadorPosicao][1]
 		elif (myId == "1"):
@@ -28,6 +29,27 @@ class Main :
 		elif (myId == "2"):
 			return lx + 1 , ly-1
 		return 0, 0
+
+
+	def calculaVelocidadeLinear(self, distanciaAlvo):
+		global ultimaVelocidade
+		lastVel = ultimaVelocidade
+		MAX_VELOCIDADE_LINEAR = 1
+		ACELERACAO_LINEAR = 0.05
+		velocidadeLinear = 0
+		#Acelerando
+		if (distanciaAlvo >= 4):
+			velocidadeLinear = lastVel + ACELERACAO_LINEAR
+			if velocidadeLinear> MAX_VELOCIDADE_LINEAR:
+				velocidadeLinear = MAX_VELOCIDADE_LINEAR
+			return float (velocidadeLinear)
+		#desacelerando
+		else:
+			velocidadeLinear = velocidadeLinear - ACELERACAO_LINEAR
+			if velocidadeLinear< ACELERACAO_LINEAR:
+				velocidadeLinear = ACELERACAO_LINEAR
+			return float (velocidadeLinear)
+
 
 
 	def myPosition(self):
@@ -44,6 +66,18 @@ class Main :
 
 	def degrees(self, value):
 		return ((value* 180.0)/math.pi)
+
+#Walking and redirecting
+	def walkhorarioon(self, vel):
+		return float (vel), -0.5 #linear and angular
+	def walkantihorarioon(self, vel):
+		return float (vel), 0.5 #linear and angular
+	def walkonhorario(self):
+		return 1, -0.1 #linear and angular
+	def walkonantihorario(self):
+		return 1, 0.1 #linear and angular
+
+
 
 	def isOriented(self):
 		x, y = self.whereImGoing()
@@ -81,11 +115,11 @@ class Main :
 			a = max ([anguloEsperado, mz])
 			b = min ([anguloEsperado , mz])
 			self.log.broadcast(ptolemy.data.StringToken("AE: "+ str(anguloEsperado) + " MA: "+ str(mz)))
-			limin = 9
+			limin = 3
 			if ((a - b) < limin or ((a-b)>(360-limin))):
-			        return True , anguloEsperado, mz
-			return False, anguloEsperado, mz
-		return False, 1000, 800
+			        return True , anguloEsperado, mz, hip
+			return False, anguloEsperado, mz, hip
+		return False, 1000, 800, 1000
 
 
 	def inPosition(self):
@@ -93,6 +127,8 @@ class Main :
 		mx, my, mz = self.myPosition()
 		if ((math.hypot(x-mx, y-my))< 0.3):
 			self.contadorPosicao = (self.contadorPosicao + 1)%len(self.pontos)
+			global ultimaVelocidade
+			ultimaVelocidade = 0
 		        return True
 		return False
 
@@ -102,42 +138,51 @@ class Main :
 		self.log.broadcast(ptolemy.data.StringToken("Im Going to -  X: "+ str(x) + " Y: "+ str(y)))
 		mx, my, mz = self.myPosition()
 		myId= str (self.mId)
-#		if (myId == "0"): # Im the leader
-			#self.log.broadcast(ptolemy.data.StringToken("Em frente"))
-#			return self.walkon()
-#		else:
 	        if (not self.inPosition()):
-	                orient, ang, mz = self.isOriented()
+	                orient, ang, mz, hip = self.isOriented()
 	                if (orient):
-				self.log.broadcast(ptolemy.data.StringToken("em frente "))
-	                        return self.walkon()
-	                if ((ang - mz) > 0):
-				self.log.broadcast(ptolemy.data.StringToken("antihorario"))
-				if ((ang- mz) < 180):
-					return self.walkantihorario()
-				else: 
-					return self.walkhorario()
-			elif((ang- mz) < 0):
-				if (abs((ang- mz)) < 180):
-					return self.walkhorario()
-				else: 
-					return self.walkantihorario()
+				#muito Orientado
+				if (int (mz) == int (ang) ):
+					self.log.broadcast(ptolemy.data.StringToken("em frente "))
+	                        	return self.walkon()
+				#Orientado mas necessita de ajustes TODO: NO ORIGINAL TEM UM ELIF
+				else:
+					if ((ang-mz) >= 0):
+						if (ang-mz)< 180:
+							return self.walkonantihorario()
+						else:
+							return self.walkonhorario()
+					else:
+						if (abs(ang-mz) < 180):
+							return self.walkonhorario()
+						else:
+							return self.walkonantihorario()
+			#Não está orientado, com distancia curta TODO provavelmente elif ou if nao faz diferenca nesse caso por causa do return
+			if hip < 2.3:
+			        if ((ang - mz) >= 0):
+					if ((ang- mz) < 180):
+						return self.walkantihorario()
+					else: 
+						return self.walkhorario()
+				elif((ang- mz) < 0):
+					if (abs((ang- mz)) < 180):
+						return self.walkhorario()
+					else: 
+						return self.walkantihorario()
+			#Não está orientado, possuindo grande distancia ao alvo
 			else:
-				self.log.broadcast(ptolemy.data.StringToken("Deu aguia"))
-	        else:
-			self.log.broadcast(ptolemy.data.StringToken("em posicao "))
-			return 0, 0
-
-
-#		                if ((ang - mz) > 0):# and (ang-mz) < 180):
-#					self.log.broadcast(ptolemy.data.StringToken("antihorario"))
-#					return self.walkantihorario()
-#		                else:
-#					#self.log.broadcast(ptolemy.data.StringToken("horario "))
-#					return self.walkhorario()
-
-
-
+				velocidade = self.calculaVelocidadeLinear(hip)
+			        if ((ang - mz) >= 0):
+					if ((ang- mz) < 180):
+						return self.walkantihorarioon(velocidade)
+					else: 
+						return self.walkhorarioon(velocidade)
+				elif((ang- mz) < 0):
+					if (abs((ang- mz)) < 180):
+						return self.walkhorarioon(velocidade)
+					else: 
+						return self.walkantihorarioon(velocidade)
+		return 0, 0
 
 
 	def whereImGoing(self):
@@ -147,11 +192,12 @@ class Main :
 		myId = self.mId
 		distance = 2
 		if (myId == "0"): # Im the leader
-			return self.pontos[self.contadorPosicao][0], self.pontos[self.contadorPosicao][1]
+#			return self.pontos[self.contadorPosicao][0], self.pontos[self.contadorPosicao][1]
+			return 10,10
 		elif (myId == "1"):
 			return lx -distance , ly - distance
 		elif (myId == "2"):
-			return lx + distance , ly  + distance
+			return lx + distance , ly  - distance
 		return 0, 0
 
 	def graus(self, value):
@@ -169,6 +215,8 @@ class Main :
 		self.mmy  = self.my.get(0).doubleValue()
 		self.mmz  = self.mz.get(0).doubleValue()
 		linear, angular = self.walk()
+		global ultimaVelocidade
+		ultimaVelocidade = float(linear)
 		self.linear.broadcast(ptolemy.data.DoubleToken(linear))
 		self.angular.broadcast(ptolemy.data.DoubleToken(angular))
 		return

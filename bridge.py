@@ -227,7 +227,7 @@ rospy.Subscriber("/robot_" + str (mId) +  "/base_pose_ground_truth",  Odometry, 
 global p
 p = rospy.Publisher("robot_" + str(mId)+ "/cmd_vel", Twist)
 #global r
-r = rospy.Rate(6) # hz
+r = rospy.Rate(100)# hz
 
 parada = 0
 cont = 0
@@ -279,21 +279,21 @@ def rosLoop (oi):
 
 
 
-if isMaster:
-	print "Im waiting the client request"
-	import socket
-	HOST = ""
-	PORT = 50000
-	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	s.bind((HOST, PORT))
-	s.listen(1)
-	conn, addr = s.accept()
-	print "Starting The ROBOT"
-	while 1:
-		data = conn.recv(1024)
-		if not data:break
-		conn.sendall(data)
-	conn.close()
+#if isMaster:
+#	print "Im waiting the client request"
+#	import socket
+#	HOST = ""
+#	PORT = 50000
+#	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#	s.bind((HOST, PORT))
+#	s.listen(1)
+#	conn, addr = s.accept()
+#	print "Starting The ROBOT"
+#	while 1:
+#		data = conn.recv(1024)
+#		if not data:break
+#		conn.sendall(data)
+#	conn.close()
 	
 
 tempoInicial = getTime()

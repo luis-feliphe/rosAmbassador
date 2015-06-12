@@ -1,4 +1,10 @@
-arquivo = open ("resultadoSimulacao.txt", "r")
+import sys
+filei = sys.argv[1]
+tipo = sys.argv [2]
+isMedia = False
+if (tipo == "media"):
+	isMedia = True
+arquivo = open (filei, "r")
 valores = arquivo.readlines()
 arquivo.close()
 listax = []
@@ -9,8 +15,10 @@ for i in valores:
 	x , y = i.replace("\n", "").replace(".0", "").split(":")
 	listax.append(int(x))
 	somatorioTempo+= int (y)
-	listay.append(somatorioTempo/float(contador))
-	#listay.append(int(y))
+	if (isMedia):
+		listay.append(somatorioTempo/float(contador))
+	else:
+		listay.append(int(y))
 	contador+=1
 
 	
