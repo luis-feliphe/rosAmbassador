@@ -26,7 +26,7 @@ import time
 getTime = lambda: int(round(time.time() * 1000))
 
 class MyAmbassador(hla.rti.FederateAmbassador):
-	def initialize(self, value):
+	def initialize(self, value, number=""):
 		self._rtia = value
 		#Variables
 		self.time = 0
@@ -45,7 +45,8 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 
 		#Handles to manipulate data from CERTI - RTIG
 
-		self.classHandle = self._rtia.getObjectClassHandle("ObjectRoot.robot")
+		self.classHandle = self._rtia.getObjectClassHandle("ObjectRoot.robot"+str(number))
+		self.log ("Using object ObjectRoot.robot"+str(number))
 		self.idHandle = self._rtia.getAttributeHandle("id", self.classHandle)
 		self.batteryHandle = self._rtia.getAttributeHandle("battery", self.classHandle)
 		self.temperatureHandle = self._rtia.getAttributeHandle("temperature", self.classHandle)

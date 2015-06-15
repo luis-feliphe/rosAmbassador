@@ -61,7 +61,6 @@ def getDegreesFromOdom(w):
 #####################################################
 #Arguments: id, battery , temperature, sensor 1 , sensor 2 , sensor 3 , gps, compass, goto , rotate, activate
 def sendData(idrobot ,battery="", temperature="", sensor1="", sensor2="", sensor3="", gps="<0;0>",compass="", goto="", rotate="", activate=""):
-	#print ("enviando " + str (sensor1) + " "  + str(sensor2)  + " " + str(sensor3)  + " " + str(gps))
 	global mya
 	rtia.updateAttributeValues(mya.myObject,
 	{mya.idHandle:str(idrobot)+" ",
@@ -129,7 +128,7 @@ try:
 except hla.rti.FederationExecutionAlreadyExists:
     log("Federation already exists.\n")
 
-#join in a federation
+#join in a federation 
 mya = MyAmbassador()
 if isMaster:
 	rtia.joinFederationExecution("master", "ExampleFederation", mya)
@@ -139,7 +138,14 @@ else:
 	else:
 		rtia.joinFederationExecution( str(mId)+"ReadyToRun", "ExampleFederation", mya)
 
-mya.initialize(rtia)
+if (mId == "00"):
+	mya.initialize(rtia, "1")
+elif (mId == "22"):
+	mya.initialize(rtia, "2")
+elif (mId == "33"):
+	mya.initialize(rtia, "3")
+else:# (mId == "00"):
+	mya.initialize(rtia)
 log("inicialized!\n")
 
 # Announce Synchronization Point (not used by Master)
@@ -220,14 +226,14 @@ def hasDataToHLA():
 	return positions.has_key("my") and positions.has_key("leader")
 
 rospy.Subscriber("/robot_0/base_pose_ground_truth",  Odometry, getPos0)
-rospy.Subscriber("/robot_" + str (mId) +  "/base_pose_ground_truth",  Odometry, getPos1)
+rospy.Subscriber("/robot_" + str (mId[0]) +  "/base_pose_ground_truth",  Odometry, getPos1)
 #rospy.Subscriber("/robot_2/base_pose_ground_truth",  Odometry, getPos2)
 
 #rospy.Subscriber("cmd_vel_mux/input/teleop",  Twist, getVel2)
 global p
-p = rospy.Publisher("robot_" + str(mId)+ "/cmd_vel", Twist)
+p = rospy.Publisher("robot_" + str(mId[0])+ "/cmd_vel", Twist)
 #global r
-r = rospy.Rate(100)# hz
+r = rospy.Rate(30)# hz
 
 parada = 0
 cont = 0
@@ -325,10 +331,10 @@ try:
 			global entrada
 			global contadorentrada
 			global mId
-			if (str (mId) == "3"):
-				entrada[contadorentrada]=str(positions["leader"][0])+ " " + str( (positions["leader"][1]))+ " " + str(positions["my"][0])+   " "  + str(positions["my"][1] + 5) + " " + str(positions["my"][2]) 
-				contadorentrada+= 1
-			sendData(int (mId), "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(positions["my"][0])+   ";"  + str(positions["my"][1]) + ";" + str(positions["my"][2])+ ">", "", "", "", str ( newConter ))
+			#if (str (mId) == "33"):
+			#	entrada[contadorentrada]=str(positions["leader"][0])+ " " + str( (positions["leader"][1]))+ " " + str(positions["my"][0])+   " "  + str(positions["my"][1] + 5) + " " + str(positions["my"][2]) 
+			#	contadorentrada+= 1
+			sendData(mId, "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(positions["my"][0])+   ";"  + str(positions["my"][1]) + ";" + str(positions["my"][2])+ ">", "", "", "", str ( newConter ))
 			#sendData(int (mId), "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(positions["my"][0])+   ";"  + str(positions["my"][1]) + ";" + str(positions["my"][2])+ ">", "", "", "", "")
 			positions = {}
 			position = None	
@@ -351,9 +357,10 @@ try:
 			_iteracoes = mya.attMap["activate"]
 			_iteracoes= _iteracoes.replace("\\", "").replace("\"", "").replace(";", "").replace(" ", "").replace("\x00", "")
 
-			#print ("o que chegou - " + str (_iteracoes) + " - " + str (_tempo)) 
+			#print ("o que chegou - " + str (_rid) + " - " + str (_goto))
+			#print ("o que chegou - " + str (_iteracoes) + " - " + str (_tempo))
 			#print (_rid)
-			if (_rid.count(str (mId) ) >0):
+			if (_rid.count(str (mId[0]) ) >0):
 				#Walk
 				if (_goto.count("none")<1 and _goto.count(";")== 1):
 					global mapaFim
@@ -423,7 +430,7 @@ finally:
 			eixoindice.append(int(i))
 			eixovalor.append(int(grafico[float (i)]))
 
-	arquivo = open ("Simulacao_Robo_"+str (mId) + ".txt", "w")
+	arquivo = open ("./sim/Simulacao_Robo_"+str (mId) + ".txt", "w")
 	for i in range (0, len (eixoindice)):
 		arquivo.write(str (eixoindice[i]) +":"+str(eixovalor[i])+"\n")
 	arquivo.close()
@@ -431,7 +438,7 @@ finally:
 	####Log system#####
 	global entrada
 	global saida
-	log = open ("logsimulacao"+ str (mId)+".txt", "w")
+	log = open ("./sim/logsimulacao"+ str (mId)+".txt", "w")
 	for i in entrada.iterkeys():
 		if (saida.has_key(i)):
 			log.write(entrada[i] + " : " + saida[i]+ "\n")
