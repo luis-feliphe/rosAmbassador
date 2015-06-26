@@ -18,7 +18,7 @@ import rospy
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
-
+import threading
 
 ####### Unused ###########
 #from sensor_msgs.msg import LaserScan
@@ -74,6 +74,9 @@ global mapaFim
 mapaFim= {}
 global newConter
 newConter = 0
+
+global teste
+teste = []
 
 ##########################
 
@@ -146,6 +149,7 @@ def calculaVelocidadeLinear(distanciaAlvo):
 
 def stop():
         return Twist()
+        t.linear.x = 0.3
 def walkon():
         global VEL_MAX
         t = Twist()
@@ -260,7 +264,6 @@ def inPosition(x, y, mx, my, mz):
 
 
 def walk (x, y, mx, my, mz):
-	global entrada
 	global myId
 	if (not inPosition(x, y, mx, my, mz)):
 		orient, ang, mz, hip = isOriented(x, y, mx, my, mz)
@@ -344,7 +347,7 @@ def sendData(idrobot ,battery="", temperature="", sensor1="", sensor2="", sensor
 #	goto=lista[8]
 #	rotate=lista[9]
 #	activate=lista[10]
-	#print ("enviando " + str (sensor1) + " "  + str(sensor2)  + " " + str(sensor3)  + " " + str(gps))
+#print (str (sensor1) + " "  + str(sensor2)  + " " + str(gps.split(";")[0])  + " " + str(gps.split(";")[1])+ " " + str(gps.split(";")[1]))
 	global mya
 	rtia.updateAttributeValues(mya.myObject,
 	{mya.idHandle:str(idrobot)+" ",
@@ -525,50 +528,54 @@ rospy.Subscriber("/robot_0/base_pose_ground_truth",  Odometry, getPos0)
 rospy.Subscriber("/robot_" + str (mId[0]) +  "/base_pose_ground_truth",  Odometry, getPos1)
 rospy.Subscriber("/robot_1/base_pose_ground_truth",  Odometry, getPosReal)
 
-global p
-p = rospy.Publisher("robot_" + str(mId[0])+ "/cmd_vel", Twist)
+#global p
+#p = rospy.Publisher("robot_" + str(mId[0])+ "/cmd_vel", Twist)
+global p2
+p2 = rospy.Publisher("robot_" + str(mId[0])+ "/cmd_vel", Twist)
 #global r
 
 
 cont = 0
 on = True
-
-
+global contadorRos2
+contadorRos2 = 0
 ################
 ## Main loop  ##
 ################
 iteracoes = 0.0
 
 def rosLoop (oi):
-	r = rospy.Rate(30) # hz
+	r = rospy.Rate(20) # hz
 	real = rospy.Publisher("robot_1/cmd_vel", Twist)
 	while not rospy.is_shutdown():
 		global IteracoesROS
+
 		###################################
 		### Bridge Sending Data to HLA  ###
 		##################################
 		if hasDataGeneral():
+#			print "----------------------------------------------"
+			#lock = threading.Lock()
+			#lock.acquire()
+			global contadorRos2
+			contadorRos2+=1
 			x, y = whereImGoing()
 			mx, my, mz = myPosition()
 			global newConter
 			newConter+= 1
 			global positions
-			#mapaInicio[str(iteracoes)]=getTime()
 			global mapaInicio
 			mapaInicio[str(newConter)]=getTime()
 			#Adicionando ao log: leaderX, leaderY, leaderZ, posX, posY, posZ 
 			global entrada
 			global contadorentrada
 			global mId
-			
-#			if (str (mId) == "3"):
-#				entrada[contadorentrada]=str(positions["leader"][0])+ " " + str( (positions["leader"][1]))+ " " + str(positions["real"][0])+   " "  + str(positions["real"][1] + 5) + " " + str(positions["real"][2]) 
+#			print "1a : "+str(positions["leader"][0])+ " " + str( (positions["leader"][1]))+ " " + str (mx)+ " " + str (my)+ "*" + str(mz)
 			entrada[contadorentrada]=str(positions["leader"][0])+ " " + str( (positions["leader"][1]))+ " " + str (mx)+ " " + str (my)+ "*" + str(mz)
+#			print "2a : " + str (entrada[contadorentrada])
 			contadorentrada+= 1
 			#TODO PRESTAR ATENCAO AQUI .... 
 			sendData(int (mId), "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(mx)+   ";"  + str(my) + ";" + str(mz)+ ">", "", "", "", str ( newConter ))
-			#sendData(int (mId), "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(positions["my"][0])+   ";"  + str(positions["my"][1]) + ";" + str(positions["my"][2])+ ">", "", "", "", str ( newConter ))
-
 			valor = walk(x, y, mx, my, mz)
 			ultimaVelocidade = valor.linear.x
 			if (SIMULATE_ERROR and IteracoesROS > 200):
@@ -580,9 +587,11 @@ def rosLoop (oi):
 			global saidaReal
 			saidaReal[contadorSaidaReal] =  str (valor.linear.x) + " | " + str (valor.angular.z)
 			contadorSaidaReal += 1
-			r.sleep()
+			#lock.release()
 			### Limpando Variaveis ###
+			#positions= {}
 		IteracoesROS += 1
+		#r.sleep()
 
 tempoInicial = getTime()
 th= Thread(target= rosLoop, args=("", ))
@@ -603,11 +612,11 @@ try:
 		### Bridge handling data from  HLA  ##
 		######################################
 		if mya.hasData():
-			evento = mya.getData()
-			_goto = evento["goto"]
-			_tempo = evento["time"]
-			_rid = evento["id"]
-			_iteracoes = evento["activate"]
+			attMap2 = mya.getData()
+			_goto = attMap2["goto"]
+			_tempo = attMap2["time"]
+			_rid = attMap2["id"]
+			_iteracoes = attMap2["activate"]
 			_iteracoes= _iteracoes.replace("\\", "").replace("\"", "").replace(";", "").replace(" ", "").replace("\x00", "")
 
 			#print ("o que chegou - " + str (_iteracoes) + " - " + str (_tempo)) 
@@ -616,7 +625,7 @@ try:
 				if (_goto.count("none")<1 and _goto.count(";")== 1):
 					global mapaFim
 					mapaFim[str(_iteracoes)]=float (_tempo)
-
+					global teste
 					_goto = _goto.replace("\\", "")
 					_goto = _goto.replace("\"", "")
 					lin, ang = _goto.split(";")
@@ -628,11 +637,16 @@ try:
 					#print ("Linear: " + str (float (lin)) + " angular: "+ str (float (ang)) )
 					global saida
 					global contadorsaida
-					saida[contadorsaida] = str (lin) + " | " + str (ang)
+					saida[contadorsaida] = str (round(float(lin),2)) + " | " + str (round(float(ang),2))
+					teste.append(str (round(float(lin),2)) + " | " + str (round(float(ang),2)))
 					contadorsaida += 1
 					twist.linear.x = round (float (lin), 2)
 					twist.angular.z = round (float (ang), 2)
-					p.publish (twist)
+					p2.publish (twist)
+			#mya.hasData = False
+			#mya.attMap = {}
+			
+
 		#######  Time Management  ########
 		timeHLA = rtia.queryFederateTime() + 1
 		rtia.timeAdvanceRequest(timeHLA)
@@ -657,6 +671,7 @@ finally:
 	print "--------- LOOP ROS -------------"
 	print "Interacoes  = "+ str(IteracoesROS)
 	print "total por loop " + str (total/float(IteracoesROS))
+	print "total Real" + str (total/float(contadorRos2))
 	print "--------------------------------"
 	tempo = []
 	grafico = {}
@@ -677,13 +692,15 @@ finally:
 			eixoindice.append(int(i))
 			eixovalor.append(int(grafico[float (i)]))
 
+
+
+	#Provavelmente esse eh o grafico do tempo 
 	arquivo = open ("./sim/Simulacao_Robo_"+str (mId) + ".txt", "w")
 	for i in range (0, len (eixoindice)):
 		arquivo.write(str (eixoindice[i]) +":"+str(eixovalor[i])+"\n")
 	arquivo.close()
 
 	####Log system#####
-	global entrada
 	global saida
 	global saidaReal
 
@@ -693,6 +710,14 @@ finally:
 			logFile.write(entrada[i] + " : " + saida[i]+ "\n")
 	logFile.close()
 		
+
+
+	logFile = open ("./sim/saida"+ str (mId)+".txt", "w")
+	for i in teste:
+		logFile.write(str(i)+ "\n")
+	logFile.close()
+		
+
 
 	logFile = open ("./sim/logsimulacaoReal"+ str (mId)+".txt", "w")
 	for i in entrada.iterkeys():

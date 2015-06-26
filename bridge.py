@@ -275,6 +275,25 @@ from threading import Thread
 def rosLoop (oi):
 	while not rospy.is_shutdown():
 		global IteracoesROS
+
+		###################################
+		### Bridge Sending Data to HLA  ###
+		##################################
+		if hasDataToHLA():
+			global newConter
+			newConter+= 1
+			global positions
+			#mapaInicio[str(iteracoes)]=getTime()
+			global mapaInicio
+			mapaInicio[str(newConter)]=getTime()
+			#Adicionando ao log: leaderX, leaderY, leaderZ, posX, posY, posZ 
+			global entrada
+			global contadorentrada
+			global mId
+			sendData(mId, "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(positions["my"][0])+   ";"  + str(positions["my"][1]) + ";" + str(positions["my"][2])+ ">", "", "", "", str ( newConter ))
+			#positions = {}
+			#position = None	
+
 		r.sleep()
 		IteracoesROS += 1
 
@@ -309,26 +328,6 @@ th.start()
 try:
 	while not rospy.is_shutdown():
 		iteracoes+= 1
-
-
-		###################################
-		### Bridge Sending Data to HLA  ###
-		##################################
-		if hasDataToHLA():
-			global newConter
-			newConter+= 1
-			global positions
-			#mapaInicio[str(iteracoes)]=getTime()
-			global mapaInicio
-			mapaInicio[str(newConter)]=getTime()
-			#Adicionando ao log: leaderX, leaderY, leaderZ, posX, posY, posZ 
-			global entrada
-			global contadorentrada
-			global mId
-			sendData(mId, "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(positions["my"][0])+   ";"  + str(positions["my"][1]) + ";" + str(positions["my"][2])+ ">", "", "", "", str ( newConter ))
-			#positions = {}
-			#position = None	
-
 
 
 
