@@ -582,8 +582,7 @@ def rosLoop (oi):
 			contadorSaidaReal += 1
 			r.sleep()
 			### Limpando Variaveis ###
-			positions= {}
-			IteracoesROS += 1
+		IteracoesROS += 1
 
 tempoInicial = getTime()
 th= Thread(target= rosLoop, args=("", ))
@@ -603,11 +602,12 @@ try:
 		######################################
 		### Bridge handling data from  HLA  ##
 		######################################
-		if mya.hasData==True :
-			_goto = mya.attMap["goto"]
-			_tempo = mya.attMap["time"]
-			_rid = mya.attMap["id"]
-			_iteracoes = mya.attMap["activate"]
+		if mya.hasData():
+			evento = mya.getData()
+			_goto = evento["goto"]
+			_tempo = evento["time"]
+			_rid = evento["id"]
+			_iteracoes = evento["activate"]
 			_iteracoes= _iteracoes.replace("\\", "").replace("\"", "").replace(";", "").replace(" ", "").replace("\x00", "")
 
 			#print ("o que chegou - " + str (_iteracoes) + " - " + str (_tempo)) 
@@ -633,10 +633,6 @@ try:
 					twist.linear.x = round (float (lin), 2)
 					twist.angular.z = round (float (ang), 2)
 					p.publish (twist)
-			mya.hasData = False
-			mya.attMap = {}
-			
-
 		#######  Time Management  ########
 		timeHLA = rtia.queryFederateTime() + 1
 		rtia.timeAdvanceRequest(timeHLA)

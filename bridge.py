@@ -303,14 +303,8 @@ def rosLoop (oi):
 	
 
 tempoInicial = getTime()
-#ThreadIsRuning= False
-#		if not ThreadIsRuning:
 th= Thread(target= rosLoop, args= ("", ))
 th.start()
-#ThreadIsRuning = True
-
-
-
 
 try:
 	while not rospy.is_shutdown():
@@ -331,13 +325,9 @@ try:
 			global entrada
 			global contadorentrada
 			global mId
-			#if (str (mId) == "33"):
-			#	entrada[contadorentrada]=str(positions["leader"][0])+ " " + str( (positions["leader"][1]))+ " " + str(positions["my"][0])+   " "  + str(positions["my"][1] + 5) + " " + str(positions["my"][2]) 
-			#	contadorentrada+= 1
 			sendData(mId, "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(positions["my"][0])+   ";"  + str(positions["my"][1]) + ";" + str(positions["my"][2])+ ">", "", "", "", str ( newConter ))
-			#sendData(int (mId), "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(positions["my"][0])+   ";"  + str(positions["my"][1]) + ";" + str(positions["my"][2])+ ">", "", "", "", "")
-			positions = {}
-			position = None	
+			#positions = {}
+			#position = None	
 
 
 
@@ -346,20 +336,14 @@ try:
 		######################################
 		### Bridge handling data from  HLA  ##
 		######################################
-#		if not ThreadIsRuning:
-#			th= Thread(target= listeningRTI, args= ("", ))
-#			th.start()
-#			ThreadIsRuning = True
-		if mya.hasData==True:
-			_goto = mya.attMap["goto"]
-			_tempo = mya.attMap["time"]
-			_rid = mya.attMap["id"]
-			_iteracoes = mya.attMap["activate"]
+		if mya.hasData():
+			evento = mya.getData()
+			_goto = evento["goto"]
+			_tempo =evento["time"]
+			_rid = evento["id"]
+			_iteracoes = evento["activate"]
 			_iteracoes= _iteracoes.replace("\\", "").replace("\"", "").replace(";", "").replace(" ", "").replace("\x00", "")
 
-			#print ("o que chegou - " + str (_rid) + " - " + str (_goto))
-			#print ("o que chegou - " + str (_iteracoes) + " - " + str (_tempo))
-			#print (_rid)
 			if (_rid.count(str (mId[0]) ) >0):
 				#Walk
 				if (_goto.count("none")<1 and _goto.count(";")== 1):
@@ -382,9 +366,6 @@ try:
 					twist.linear.x = round (float (lin), 2)
 					twist.angular.z = round (float (ang), 2)
 					p.publish (twist)
-			mya.hasData = False
-			mya.attMap = {}
-			
 
 		#######  Time Management  ########
 		timeHLA = rtia.queryFederateTime() + 1

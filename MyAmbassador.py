@@ -40,8 +40,7 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 		self.posy = None
 		self.id = None
 
-		self.attMap = {}
-		self.hasData = False
+		self.listaDados = []
 
 		#Handles to manipulate data from CERTI - RTIG
 
@@ -67,20 +66,25 @@ class MyAmbassador(hla.rti.FederateAmbassador):
 	#Calbacks from CERTI - HLA#
 	###########################
 	def reflectAttributeValues(self, object, attributes, tag, order, transport, time=None, retraction=None):
-		#self.attMap["time"] = self._rtia.queryFederateTime()
-		self.attMap["time"] = getTime()
-		self.attMap["id"] = attributes[self.idHandle]
-		self.attMap["battery"]= attributes[self.batteryHandle]
-                self.attMap["temperature"]= attributes[self.temperatureHandle]
-		self.attMap["sensor1"]= attributes[self.sensor1Handle]
-		self.attMap["sensor2"]= attributes[self.sensor2Handle].replace("sensor2:","").replace("\x00","")
-		self.attMap["sensor3"]= attributes[self.sensor3Handle]
-                self.attMap["gps"] = attributes[self.gpsHandle]
-                self.attMap["compass"] = attributes[self.compassHandle]
-                self.attMap["goto"] = attributes[self.gotoHandle]
-                self.attMap["rotate"]= attributes[self.rotateHandle]
-                self.attMap["activate"]= attributes[self.activateHandle]
-		self.hasData= True
+		attMap = {}
+		attMap["time"] = getTime()
+		attMap["id"] = attributes[self.idHandle]
+		attMap["battery"]= attributes[self.batteryHandle]
+		attMap["temperature"]= attributes[self.temperatureHandle]
+		attMap["sensor1"]= attributes[self.sensor1Handle]
+		attMap["sensor2"]= attributes[self.sensor2Handle].replace("sensor2:","").replace("\x00","")
+		attMap["sensor3"]= attributes[self.sensor3Handle]
+		attMap["gps"] = attributes[self.gpsHandle]
+		attMap["compass"] = attributes[self.compassHandle]
+		attMap["goto"] = attributes[self.gotoHandle]
+		attMap["rotate"]= attributes[self.rotateHandle]
+		attMap["activate"]= attributes[self.activateHandle]
+		self.listaDados.append(attMap)
+
+	def hasData (self):
+		return (len (self.listaDados)>0)
+	def getData (self):
+		return self.listaDados.pop(0)
 
 	def log (self, valor):
 		print ("\033[34m" + valor + "\033[0;0m")
