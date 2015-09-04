@@ -39,6 +39,7 @@ class Application (Frame):
 		self.pack()
 
 
+AtivaMensagem =True 
 
 global posicoesRobo1
 global posicoesRobo3
@@ -47,24 +48,25 @@ posicoesRobo3= None
 listaDistancia = []
 
 #### Posicoes dos robos #####
+global robo0
 global robo1
 global robo2
 global robo3
-global robo4
+robo0=[]
 robo1=[]
 robo2=[]
 robo3=[]
-robo4=[]
 #############################
-
-def escreverLista (lista, nomeArquivo):
-	arquivo = open (nomeArquivo, "w")
-	for i in lista:
-		arquivo.write (str (i)+ "\n")
-	arquivo.close()
-
 def getxy (odom):
 	return odom.pose.pose.position.x, odom.pose.pose.position.y#degrees(yall)
+
+def escreveLista (lista, nomeArquivo):
+	arquivo = open (nomeArquivo, "w")
+	for i in lista:
+		x, y = getxy(i)
+		arquivo.write (str (x)+ ":"+ str (y)+ "\n")
+	arquivo.close()
+
 
 import math
 def getPos0(w):
@@ -100,11 +102,11 @@ def criarJanela (entrada):
 
 ##### Funcoes para fechar os nós respectivos ######
 def close1(arg):
-	call(["rosnode", "kill" , "/bridge_0"])	
+	call(["rosnode", "kill" , "/bridge_00"])	
 def close2(arg):
-	call(["rosnode", "kill" , "/bridge_2"])
+	call(["rosnode", "kill" , "/bridge_22"])
 def close3 (arg):
-	call(["rosnode", "kill" , "/bridge_3"])
+	call(["rosnode", "kill" , "/bridge_33"])
 ##################################################
 rospy.init_node("Escuta")
 rospy.Subscriber("/robot_0/base_pose_ground_truth",  Odometry, getPos0)
@@ -113,26 +115,34 @@ rospy.Subscriber("/robot_2/base_pose_ground_truth",  Odometry, getPos2)
 rospy.Subscriber("/robot_3/base_pose_ground_truth",  Odometry, getPos3)
 
 r = rospy.Rate(10) # hz
-already = False
+#variaveis para calculo do erro
+already = 0
+error = [0]
+erroAnterior = 0
+
+
 try:
 	while not rospy.is_shutdown():
 		if canCompare():
 			global posicoesRobo3
 			global posicoesRobo1
+			already = already + 1
 			xa, ya = getxy(posicoesRobo1)
 			xb, yb = getxy(posicoesRobo3)
 			distancia = math.hypot (xa - xb, ya- (yb+5))
-#			if (distancia > 1) and (not already):
-#				th = Thread (target = criarJanela, args =("", ))
-#				t1 = Thread (target = close1, args =("", ))
-#				t2 = Thread (target = close2, args =("", ))
-#				t3 = Thread (target = close3, args =("", ))
-#				th.start()
-#				t1.start()
-#				t2.start()
-#				t3.start()
-#				listaDistancia.append(distancia)
-#				break
+			erroAtual = distancia-erroAnterior
+			if AtivaMensagem and (already> 50) and (distancia > 2):
+				th = Thread (target = criarJanela, args =("", ))
+				t1 = Thread (target = close1, args =("", ))
+				t2 = Thread (target = close2, args =("", ))
+				t3 = Thread (target = close3, args =("", ))
+				th.start()
+				t1.start()
+				t2.start()
+				t3.start()
+				listaDistancia.append(distancia)
+				break
+			error.append(erroAtual)
 			posicoesRobo1= None
 			posicoesRobo2= None
 			listaDistancia.append(distancia)
@@ -142,17 +152,17 @@ except Exception:
 	raise
 finally:
 	#escrevendo distancia e distancia relativa
-	arquivo = open ("./sim/distancia.txt", "w")
-	arquivo2= open ("./sim/distanciaRelativa.txt", "w")
-	last = 0
-	cont = 0
-	for i in listaDistancia:
-		arquivo.write(str (cont) + ":"+ str (i)+ "\n")
-		arquivo2.write(str (cont) + ":"+ str( i - last)+ "\n")
-		last = i
-		cont =+ 1
-	arquivo.close()
-	arquivo2.close()
+	#arquivo = open ("./sim/distancia.txt", "w")
+	#arquivo2= open ("./sim/distanciaRelativa.txt", "w")
+	#last = 0
+	#cont = 0
+	#for i in listaDistancia:
+#		arquivo.write(str (cont) + ":"+ str (i)+ "\n")
+#		arquivo2.write(str (cont) + ":"+ str( i - last)+ "\n")
+#		last = i
+#		cont =+ 1
+#	arquivo.close()
+#	arquivo2.close()
 	# escrevendo posicoes	
 	escreveLista(robo0, "./sim/posicoesrobo0.txt") 
 	escreveLista(robo1, "./sim/posicoesrobo1.txt") 

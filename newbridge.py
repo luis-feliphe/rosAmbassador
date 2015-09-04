@@ -35,7 +35,7 @@ import threading
 ##########################
 ##########################
 global SIMULATE_ERROR
-SIMULATE_ERROR = False
+SIMULATE_ERROR =True 
 
 ##### Log robô Simulado ###
 global entrada
@@ -545,7 +545,7 @@ contadorRos2 = 0
 iteracoes = 0.0
 
 def rosLoop (oi):
-	r = rospy.Rate(20) # hz
+	r = rospy.Rate(300) # hz
 	real = rospy.Publisher("robot_1/cmd_vel", Twist)
 	while not rospy.is_shutdown():
 		global IteracoesROS
@@ -578,10 +578,10 @@ def rosLoop (oi):
 			sendData(int (mId), "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(mx)+   ";"  + str(my) + ";" + str(mz)+ ">", "", "", "", str ( newConter ))
 			valor = walk(x, y, mx, my, mz)
 			ultimaVelocidade = valor.linear.x
-			if (SIMULATE_ERROR and IteracoesROS > 200):
-				valor = Twist()
-				valor.angular.z =1
-				valor.linear.x = 1
+#			if (SIMULATE_ERROR and IteracoesROS > 200):
+#				valor = Twist()
+#				valor.angular.z =1
+#				valor.linear.x = 1
 			real.publish(valor)
 			global contadorSaidaReal
 			global saidaReal
@@ -589,9 +589,15 @@ def rosLoop (oi):
 			contadorSaidaReal += 1
 			#lock.release()
 			### Limpando Variaveis ###
-			#positions= {}
+		if (SIMULATE_ERROR and IteracoesROS > 100):
+			print "CHEGOU AQUI " 
+			valor = Twist()
+			valor.angular.z =0.5
+			valor.linear.x = 1
+			real.publish(valor)
+		#positions= {}
 		IteracoesROS += 1
-		#r.sleep()
+		r.sleep()
 
 tempoInicial = getTime()
 th= Thread(target= rosLoop, args=("", ))

@@ -32,7 +32,7 @@ global saida
 entrada = {}
 saida={}
 
-
+RATE =300 
 global mya
 global on 
 on = True
@@ -54,9 +54,9 @@ def getDegreesFromOdom(w):
         return math.degrees(current_angle)
 
 
+def getxy (odom):
+        return round (odom.pose.pose.position.x), round ( odom.pose.pose.position.y), round (getDegreesFromOdom (odom))#degrees(yall)
 
-
-#####################################################
 # This Method responsible to publish data on HLA #
 #####################################################
 #Arguments: id, battery , temperature, sensor 1 , sensor 2 , sensor 3 , gps, compass, goto , rotate, activate
@@ -142,6 +142,8 @@ if (mId == "00"):
 	mya.initialize(rtia, "1")
 elif (mId == "22"):
 	mya.initialize(rtia, "2")
+elif (mId == "11"):
+	mya.initialize(rtia, "3")
 elif (mId == "33"):
 	mya.initialize(rtia, "3")
 else:# (mId == "00"):
@@ -215,15 +217,24 @@ global positions
 positions = {}
 def getPos0(odom):
 	global positions
-	positions["leader"] = [round (odom.pose.pose.position.x), round (odom.pose.pose.position.y), round (odom.pose.pose.orientation.w)]
+	positions["leader"] =  odom#[round (odom.pose.pose.position.x), round (odom.pose.pose.position.y), round (odom.pose.pose.orientation.w)]
 def getPos1(odom):
 	global positions
 	global listaPosicoes
-	positions["my"] = [round (odom.pose.pose.position.x), round (odom.pose.pose.position.y), round (getDegreesFromOdom(odom))]
-	listaPosicoes.append(str(round(odom.pose.pose.position.x, 2)) + ":"+ str (round(odom.pose.pose.position.y, 2)))
+	positions["my"] = odom # [round (odom.pose.pose.position.x), round (odom.pose.pose.position.y), round (getDegreesFromOdom(odom))]
+	#listaPosicoes.append(str(round(odom.pose.pose.position.x, 2)) + ":"+ str (round(odom.pose.pose.position.y, 2)))
 def hasDataToHLA():
 	global positions
 	return positions.has_key("my") and positions.has_key("leader")
+
+def getDataFromRos():
+	global positions
+	x, y, z = getxy(positions["leader"])
+	mx, my, mz = getxy(positions["my"])
+	positions = {}
+	return x, y , mx, my, mz
+
+
 
 rospy.Subscriber("/robot_0/base_pose_ground_truth",  Odometry, getPos0)
 rospy.Subscriber("/robot_" + str (mId[0]) +  "/base_pose_ground_truth",  Odometry, getPos1)
@@ -233,7 +244,7 @@ rospy.Subscriber("/robot_" + str (mId[0]) +  "/base_pose_ground_truth",  Odometr
 global p
 p = rospy.Publisher("robot_" + str(mId[0])+ "/cmd_vel", Twist)
 #global r
-r = rospy.Rate(30)# hz
+r = rospy.Rate(1)# hz
 
 parada = 0
 cont = 0
@@ -290,10 +301,8 @@ def rosLoop (oi):
 			global entrada
 			global contadorentrada
 			global mId
-			sendData(mId, "", "", positions["leader"][0], positions["leader"][1], positions["leader"][2], "<" + str(positions["my"][0])+   ";"  + str(positions["my"][1]) + ";" + str(positions["my"][2])+ ">", "", "", "", str ( newConter ))
-			#positions = {}
-			#position = None	
-
+			x, y, mx, my, mz = getDataFromRos()
+			sendData(mId, "", "", x, y, "0", "<" + str(mx)+   ";"  + str(my) + ";" + str(mz)+ ">", "", "", "", str ( newConter ))
 		r.sleep()
 		IteracoesROS += 1
 
@@ -342,7 +351,6 @@ try:
 			_rid = evento["id"]
 			_iteracoes = evento["activate"]
 			_iteracoes= _iteracoes.replace("\\", "").replace("\"", "").replace(";", "").replace(" ", "").replace("\x00", "")
-
 			if (_rid.count(str (mId[0]) ) >0):
 				#Walk
 				if (_goto.count("none")<1 and _goto.count(";")== 1):

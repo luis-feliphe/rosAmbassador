@@ -25,28 +25,33 @@ from datetime import datetime
 def remove_fromList(the_list, val):
    return [value for value in the_list if value != val]
 
+
+VARIACAO_POS = 4
+global POSICAO_INICIAL
+POSICAO_INICIAL = None
+
 def log (valor):
 	print ("\033[36m" + valor + "\033[0;0m")
 
 def scan(var):
 	print ("ranges "+ str(min(remove_fromList(var.ranges, 5.0))))
 
-
-global scanner1
-scanner1 = None
-def esq (data):
-	global scanner1
-	scanner1 = min(data.ranges)
-
-global scanner2
-scanner2 = None
-def dire (data):
-	global scanner2
-	scanner2 = min(data.ranges)
-
+def getxy (odom):
+        return round (odom.pose.pose.position.x), round ( odom.pose.pose.position.y)
 getTime = lambda: int(round(time.time() * 1000))
 
+global posicao
 
+def getPos0(odom):
+	global POSICAO_INICIAL
+	if (POSICAO_INICIAL == None):
+		x, y = getxy (odom)
+		POSICAO_INICIAL  = [x, y]
+	global posicao
+	posicao = odom 
+def posicaoAtual():
+	global posicao
+	return getxy (posicao)
 
 
 #############
@@ -60,15 +65,10 @@ rospy.init_node('robot_'+str(sys.argv[1]))
 # Publish on cmd_vel Topic
 x =  "robot_" + str (sys.argv[1]) + "/cmd_vel"
 p = rospy.Publisher(x, Twist)
-#subscribing a position of the robot (Not Necessary)
-#rospy.Subscriber("/robot_0/base_scan",  LaserScan, scan)
-value1 = "robot_" + str(sys.argv[1]) + "/base_scan_0"
-value2 = "robot_" + str(sys.argv[1]) + "/base_scan_1"
-rospy.Subscriber(value1, LaserScan, esq)
-rospy.Subscriber(value2, LaserScan, dire)
+#subscreve na odometria
+rospy.Subscriber("/robot_"+ str (sys.argv[1])+"/base_pose_ground_truth",  Odometry, getPos0)
 
-print "inciiando como robot"
-print value1
+print "inciando como robot"
 
 r = rospy.Rate(freq) # hz
 import time
@@ -77,8 +77,6 @@ global on
 on = True
 global cont 
 cont = 0 
-#valor padra para testes
-#way = 200
 way = 500
 
 ###################
@@ -92,46 +90,29 @@ tempoInicial = getTime()
 direcao= True
 try:
 	while not rospy.is_shutdown():
-		iteracoes+= 1
-		#print the actual time
-		millis = int(round(time.time() * 1000))
-		#print "tempo no incio do loop " + str(millis)
-		# create a twist message with random values
-#		if (on):
-#			twist = Twist()
-#			twist.linear.x = 1
-#			twist.linear.y = 1
-#			cont = cont +1
-#		else:
-#			twist = Twist()
-#			twist.linear.x = -1
-#			twist.linear.y = -1
-#			cont = cont+1
-#		if (cont > 100000):
-#			cont = 0
-#			on = not on		
-		# Publish the message
-		if (direcao):
-			if (scanner1<1.5):
-				direcao = False
+		global POSICAO_INICIAL
+		if (POSICAO_INICIAL != None):
+			iteracoes+= 1
+			x, y  = posicaoAtual()
+			# Publish the message
+			if (direcao):
+				if (x >= POSICAO_INICIAL[0] + VARIACAO_POS ):
+					direcao = False
+				else:
+					twist = Twist()
+					twist.linear.x = 0.4
 			else:
-				twist = Twist()
-				twist.linear.x = 1
-				twist.linear.y = 1
-		else:
-			if (scanner2<1.5):
-				direcao = True
-			else:
-				twist = Twist()
-				twist.linear.x = -1
-				twist.linear.y = -1
-		p.publish(twist)
-		# TODO check if this sleep is necessary
+				if (x < POSICAO_INICIAL[0]):
+					direcao = True
+				else:
+					twist = Twist()
+					twist.linear.x = -0.4
+			p.publish(twist)
+			# TODO check if this sleep is necessary
 		r.sleep()
-except:
-	pass
+except Exception :
+	raise
 finally:
-        tempoFinal = getTime()
-        total = tempoFinal - tempoInicial
-        print "--- Obstaculo " + str(sys.argv[1]) + "------------\ntempo de simulacao = "+ str(total) + "\nInteracoes = "+ str(iteracoes) + "\ntotal por loop " + str (total/iteracoes) + "\n\n"
-
+	tempoFinal = getTime()
+	total = tempoFinal - tempoInicial
+	print "--- Obstaculo " + str(sys.argv[1]) + "------------\ntempo de simulacao = "+ str(total) + "\nInteracoes = "+ str(iteracoes) + "\ntotal por loop " + str (total/iteracoes) + "\n\n"
